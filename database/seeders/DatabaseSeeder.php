@@ -15,11 +15,33 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Seeders dans l'ordre
+        $this->call([
+            RestaurantSeeder::class,
+            CategorySeeder::class,
+            DishSeeder::class,
+            FAQSeeder::class,
         ]);
+
+        // Créer un utilisateur de test
+        User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'firstname' => 'Test',
+                'lastname' => 'User',
+                'password' => bcrypt('password'),
+            ]
+        );
+
+        // Créer un utilisateur admin
+        User::firstOrCreate(
+            ['email' => 'admin@chelsy-restaurant.bj'],
+            [
+                'firstname' => 'Admin',
+                'lastname' => 'CHELSY',
+                'password' => bcrypt('admin123'),
+                'is_admin' => true,
+            ]
+        );
     }
 }

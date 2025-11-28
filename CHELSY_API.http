@@ -1,0 +1,454 @@
+### ============================================
+### CHELSY RESTAURANT API - GUIDE DE TEST COMPLET
+### ============================================
+### 
+### INSTRUCTIONS :
+### 1. Installez l'extension "REST Client" dans VS Code
+### 2. Cliquez sur "Send Request" au-dessus de chaque requête
+### 3. Suivez l'ordre numéroté pour tester proprement
+### 4. Après le login, copiez le token et collez-le dans la variable @token ci-dessous
+###
+### ============================================
+
+### Variables (Modifiez ces valeurs si nécessaire)
+@base_url = http://api-chelsy-apk.test/api/v1
+@token = VOTRE_TOKEN_ICI_APRES_LOGIN
+
+### ============================================
+### ÉTAPE 1 : AUTHENTIFICATION
+### ============================================
+### Testez dans l'ordre : Register → Login → Me → Logout
+
+### 1.1 Register - Créer un compte
+POST {{base_url}}/register
+Content-Type: application/json
+
+{
+  "firstname": "Test",
+  "lastname": "User",
+  "email": "test.user@example.com",
+  "password": "password123",
+  "password_confirmation": "password123",
+  "phone": "+229 12 34 56 78"
+}
+
+### 1.2 Login - Se connecter (IMPORTANT : Copiez le token de la réponse)
+POST {{base_url}}/login
+Content-Type: application/json
+
+{
+  "email": "test.user@example.com",
+  "password": "password123"
+}
+
+### 1.3 Me - Voir les infos de l'utilisateur connecté
+GET {{base_url}}/me
+Authorization: Bearer {{token}}
+
+### 1.4 Forgot Password - Demander réinitialisation
+POST {{base_url}}/forgot-password
+Content-Type: application/json
+
+{
+  "email": "test.user@example.com"
+}
+
+### 1.5 Reset Password - Réinitialiser le mot de passe
+### NOTE : Utilisez le token reçu par email
+POST {{base_url}}/reset-password
+Content-Type: application/json
+
+{
+  "email": "test.user@example.com",
+  "token": "TOKEN_RECU_PAR_EMAIL",
+  "password": "newpassword123",
+  "password_confirmation": "newpassword123"
+}
+
+### 1.6 Logout - Se déconnecter
+POST {{base_url}}/logout
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 2 : PROFIL UTILISATEUR
+### ============================================
+### (Nécessite d'être connecté - utilisez le token)
+
+### 2.1 Get Profile - Voir le profil
+GET {{base_url}}/profile
+Authorization: Bearer {{token}}
+
+### 2.2 Update Profile - Modifier le profil
+PUT {{base_url}}/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstname": "Test",
+  "lastname": "User Updated",
+  "email": "test.user@example.com",
+  "phone": "+229 98 76 54 32",
+  "birth_date": "1990-01-01",
+  "gender": "male"
+}
+
+### 2.3 Change Password - Changer le mot de passe
+POST {{base_url}}/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "current_password": "password123",
+  "password": "newpassword123",
+  "password_confirmation": "newpassword123"
+}
+
+### ============================================
+### ÉTAPE 3 : RESTAURANT (PUBLIC)
+### ============================================
+### Pas besoin d'authentification
+
+### 3.1 Get Restaurant - Informations du restaurant
+GET {{base_url}}/restaurant
+
+### ============================================
+### ÉTAPE 4 : CATÉGORIES (PUBLIC)
+### ============================================
+
+### 4.1 List Categories - Liste des catégories
+GET {{base_url}}/categories
+
+### 4.2 Get Category - Détails d'une catégorie
+GET {{base_url}}/categories/1
+
+### ============================================
+### ÉTAPE 5 : PLATS (PUBLIC)
+### ============================================
+
+### 5.1 List Dishes - Liste des plats
+GET {{base_url}}/dishes
+
+### 5.2 List Dishes (with filters) - Liste avec filtres
+GET {{base_url}}/dishes?category_id=1&is_vegetarian=true&sort_by=price&sort_order=asc
+
+### 5.3 Featured Dishes - Plats mis en avant
+GET {{base_url}}/dishes/featured
+
+### 5.4 Popular Dishes - Plats populaires
+GET {{base_url}}/dishes/popular
+
+### 5.5 Get Dish - Détails d'un plat
+GET {{base_url}}/dishes/1
+
+### 5.6 Dish Reviews - Avis publics d'un plat
+GET {{base_url}}/dishes/1/reviews
+
+### ============================================
+### ÉTAPE 6 : FAQ (PUBLIC)
+### ============================================
+
+### 6.1 List FAQs - Liste des questions fréquentes
+GET {{base_url}}/faqs
+
+### ============================================
+### ÉTAPE 7 : ADRESSES (AUTHENTIFIÉ)
+### ============================================
+
+### 7.1 List Addresses - Liste des adresses
+GET {{base_url}}/addresses
+Authorization: Bearer {{token}}
+
+### 7.2 Create Address - Créer une adresse
+POST {{base_url}}/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Maison",
+  "street": "123 Rue de la Paix",
+  "city": "Cotonou",
+  "postal_code": "01BP1234",
+  "country": "Bénin",
+  "latitude": 6.372477,
+  "longitude": 2.354006,
+  "additional_info": "Près de l'école",
+  "is_default": true
+}
+
+### 7.3 Get Address - Détails d'une adresse
+GET {{base_url}}/addresses/1
+Authorization: Bearer {{token}}
+
+### 7.4 Update Address - Modifier une adresse
+PUT {{base_url}}/addresses/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Bureau",
+  "street": "456 Avenue de la République",
+  "city": "Cotonou",
+  "latitude": 6.372477,
+  "longitude": 2.354006,
+  "is_default": false
+}
+
+### 7.5 Delete Address - Supprimer une adresse
+DELETE {{base_url}}/addresses/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 8 : PANIER (AUTHENTIFIÉ)
+### ============================================
+
+### 8.1 Get Cart - Voir le panier
+GET {{base_url}}/cart
+Authorization: Bearer {{token}}
+
+### 8.2 Add to Cart - Ajouter au panier
+POST {{base_url}}/cart/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "dish_id": 1,
+  "quantity": 2,
+  "selected_options": [],
+  "special_instructions": "Sans oignons"
+}
+
+### 8.3 Update Cart Item - Modifier un article du panier
+PUT {{base_url}}/cart/items/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 3,
+  "special_instructions": "Avec extra fromage"
+}
+
+### 8.4 Remove Cart Item - Supprimer un article
+DELETE {{base_url}}/cart/items/1
+Authorization: Bearer {{token}}
+
+### 8.5 Clear Cart - Vider le panier
+DELETE {{base_url}}/cart
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 9 : COMMANDES (AUTHENTIFIÉ)
+### ============================================
+### IMPORTANT : Créez d'abord une adresse (Étape 7) et ajoutez des articles au panier (Étape 8)
+
+### 9.1 List Orders - Liste des commandes
+GET {{base_url}}/orders
+Authorization: Bearer {{token}}
+
+### 9.2 Create Order (Cash Payment) - Créer commande avec paiement espèces
+POST {{base_url}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "restaurant_id": 1,
+  "address_id": 1,
+  "items": [
+    {
+      "dish_id": 1,
+      "quantity": 1
+    }
+  ],
+  "payment_method": "cash",
+  "delivery_mode": "delivery"
+}
+
+### 9.3 Create Order (Card Payment) - Créer commande avec paiement carte
+### NOTE : Cette route retourne un client_secret pour Stripe
+POST {{base_url}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "restaurant_id": 1,
+  "address_id": 1,
+  "items": [
+    {
+      "dish_id": 1,
+      "quantity": 2,
+      "selected_options": [],
+      "special_instructions": "Sans oignons"
+    }
+  ],
+  "payment_method": "card",
+  "delivery_mode": "delivery",
+  "scheduled_time": "2025-11-27 19:00:00",
+  "notes": "Livrer à la porte"
+}
+
+### 9.4 Create Order (Mobile Money) - Créer commande avec Mobile Money
+POST {{base_url}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "restaurant_id": 1,
+  "address_id": 1,
+  "items": [
+    {
+      "dish_id": 1,
+      "quantity": 1
+    }
+  ],
+  "payment_method": "mobile_money",
+  "mobile_money_provider": "MTN",
+  "mobile_money_number": "+229 12 34 56 78",
+  "delivery_mode": "delivery"
+}
+
+### 9.5 Create Order (With Promo Code) - Créer commande avec code promo
+POST {{base_url}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "restaurant_id": 1,
+  "address_id": 1,
+  "items": [
+    {
+      "dish_id": 1,
+      "quantity": 2
+    }
+  ],
+  "payment_method": "cash",
+  "promo_code": "PROMO10",
+  "delivery_mode": "delivery"
+}
+
+### 9.6 Get Order - Détails d'une commande
+GET {{base_url}}/orders/1
+Authorization: Bearer {{token}}
+
+### 9.7 Cancel Order - Annuler une commande
+POST {{base_url}}/orders/1/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cancellation_reason": "Changement d'avis"
+}
+
+### 9.8 Get Invoice (Base64) - Facture en base64
+GET {{base_url}}/orders/1/invoice
+Authorization: Bearer {{token}}
+
+### 9.9 Download Invoice - Télécharger la facture PDF
+GET {{base_url}}/orders/1/invoice/download
+Authorization: Bearer {{token}}
+
+### 9.10 Reorder - Recommander une commande
+POST {{base_url}}/orders/1/reorder
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 10 : PAIEMENTS (AUTHENTIFIÉ)
+### ============================================
+### IMPORTANT : Créez d'abord une commande avec payment_method: "card" (9.3)
+
+### 10.1 Confirm Stripe Payment - Confirmer un paiement Stripe
+### NOTE : Utilisez le payment_intent_id retourné lors de la création de commande (9.3)
+POST {{base_url}}/payments/confirm-stripe
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "order_id": 1,
+  "payment_intent_id": "pi_xxxxxxxxxxxxx"
+}
+
+### ============================================
+### ÉTAPE 11 : AVIS (AUTHENTIFIÉ)
+### ============================================
+### IMPORTANT : Créez d'abord une commande et attendez qu'elle soit livrée
+
+### 11.1 Create Review - Créer un avis
+POST {{base_url}}/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "order_id": 1,
+  "dish_id": 1,
+  "restaurant_rating": 5,
+  "dish_rating": 5,
+  "delivery_rating": 4,
+  "comment": "Excellent service, plat délicieux !",
+  "images": []
+}
+
+### ============================================
+### ÉTAPE 12 : FAVORIS (AUTHENTIFIÉ)
+### ============================================
+
+### 12.1 List Favorites - Liste des favoris
+GET {{base_url}}/favorites
+Authorization: Bearer {{token}}
+
+### 12.2 Add Favorite - Ajouter un favori
+POST {{base_url}}/favorites
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "dish_id": 1
+}
+
+### 12.3 Remove Favorite - Supprimer un favori
+DELETE {{base_url}}/favorites/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 13 : CODES PROMO (AUTHENTIFIÉ)
+### ============================================
+
+### 13.1 Validate Promo Code - Valider un code promo
+POST {{base_url}}/promo-codes/validate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "code": "PROMO10",
+  "order_amount": 10000
+}
+
+### ============================================
+### ÉTAPE 14 : RÉCLAMATIONS (AUTHENTIFIÉ)
+### ============================================
+
+### 14.1 List Complaints - Liste des réclamations
+GET {{base_url}}/complaints
+Authorization: Bearer {{token}}
+
+### 14.2 Create Complaint - Créer une réclamation
+POST {{base_url}}/complaints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "order_id": 1,
+  "type": "quality",
+  "subject": "Plat froid",
+  "description": "Le plat était froid à la livraison",
+  "images": []
+}
+
+### 14.3 Get Complaint - Détails d'une réclamation
+GET {{base_url}}/complaints/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### ROUTES NON TESTABLES VIA HTTP (Webhooks)
+### ============================================
+
+### Webhook Stripe - Appelé automatiquement par Stripe
+### POST {{base_url}}/webhooks/stripe
+### (Testé via Stripe CLI : stripe trigger payment_intent.succeeded)
