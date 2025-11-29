@@ -24,8 +24,13 @@ return new class extends Migration
             $table->date('birth_date')->nullable();
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
             $table->string('avatar')->nullable();
+            $table->string('fcm_token')->nullable();
+            $table->timestamp('fcm_token_updated_at')->nullable();
             $table->rememberToken();
             $table->timestamp('last_login_at')->nullable();
+            $table->boolean('is_admin')->default(false);
+            $table->boolean('is_blocked')->default(false);
+            $table->boolean('is_driver')->default(false);
             $table->timestamps();
         });
 

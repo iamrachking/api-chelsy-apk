@@ -1,169 +1,79 @@
-# 🍽️ API CHELSY Restaurant
+# API CHELSY Restaurant
 
-API REST complète pour la gestion d'un restaurant avec système de commandes, paiements, notifications push et suivi GPS des livreurs.
+API REST pour la gestion d'un restaurant avec commandes en ligne, paiements, notifications push et suivi GPS des livreurs.
 
-## 📋 Table des matières
+## Ce qui est disponible
 
-- [Fonctionnalités](#-fonctionnalités)
-- [Technologies](#-technologies)
-- [Prérequis](#-prérequis)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Documentation API](#-documentation-api)
-- [Tests](#-tests)
-- [Structure du projet](#-structure-du-projet)
-- [État des fonctionnalités](#-état-des-fonctionnalités)
+L'API couvre les fonctionnalités principales d'un restaurant en ligne :
 
-## ✨ Fonctionnalités
+- **Authentification** : inscription, connexion, réinitialisation de mot de passe
+- **Gestion utilisateur** : profil, adresses, avatar
+- **Catalogue** : catégories, plats avec filtres, avis
+- **Panier** : gestion complète avec options de personnalisation
+- **Commandes** : création, suivi, annulation, factures PDF
+- **Paiements** : espèces, carte bancaire (Stripe), Mobile Money (structure prête)
+- **Avis et notations** : restaurant, plats, livraison
+- **Favoris** : sauvegarde des plats préférés
+- **Codes promo** : validation et application automatique
+- **FAQ** : questions fréquentes
+- **Réclamations** : système de tickets
+- **Dashboard admin** : gestion complète de toutes les entités
+- **Import/Export** : catégories et plats en CSV
+- **Notifications push** : Firebase Cloud Messaging
+- **Suivi GPS** : position des livreurs en temps réel
+- **Documentation Swagger** : tous les endpoints documentés
 
-### ✅ Implémentées (17 fonctionnalités - 94%)
+## Technologies utilisées
 
-1. **Authentification complète**
-   - Inscription, connexion, déconnexion
-   - Réinitialisation de mot de passe
-   - Gestion du profil utilisateur
+- Laravel 12.x
+- PHP 8.2+
+- MySQL
+- Laravel Sanctum (authentification)
+- Stripe (paiements)
+- Firebase Cloud Messaging (notifications)
+- Swagger/OpenAPI (documentation)
+- DomPDF (factures)
+- Intervention Image (traitement d'images)
 
-2. **Gestion utilisateur**
-   - Profil utilisateur avec avatar
-   - Gestion des adresses (CRUD complet)
-   - Blocage/déblocage utilisateurs (admin)
+## Installation
 
-3. **Catalogue**
-   - Liste des catégories et plats
-   - Filtres avancés (catégorie, végétarien, prix)
-   - Plats mis en avant et populaires
-   - Avis publics des plats
-
-4. **Panier**
-   - Gestion complète du panier
-   - Options de personnalisation des plats
-   - Calcul automatique des totaux
-
-5. **Commandes**
-   - Création de commandes
-   - Suivi des statuts
-   - Annulation de commandes
-   - Recommandation de commandes
-   - Génération de factures PDF
-
-6. **Paiements**
-   - Paiement en espèces
-   - Paiement par carte bancaire (Stripe)
-   - Paiement Mobile Money (structure prête)
-
-7. **Avis et notations**
-   - Notation du restaurant, plats et livraison
-   - Commentaires et images
-
-8. **Favoris**
-   - Ajout/suppression de plats favoris
-
-9. **Codes promo**
-   - Validation et application automatique
-   - CRUD complet (admin)
-   - Statistiques d'utilisation
-
-10. **FAQ**
-    - Liste des questions fréquentes
-    - CRUD complet (admin)
-
-11. **Réclamations**
-    - Création et suivi des réclamations
-    - CRUD complet (admin)
-    - Réponses admin
-
-12. **Dashboard admin**
-    - Statistiques générales
-    - Gestion complète de toutes les entités
-
-13. **Import/Export de données**
-    - Import de catégories et plats (CSV)
-    - Export des utilisateurs et statistiques (CSV)
-
-14. **Notifications Push (FCM)**
-    - Enregistrement des tokens FCM
-    - Notifications automatiques (commandes, statuts, paiements)
-    - Support Service Account JSON et Server Key
-
-15. **Documentation Swagger**
-    - Documentation complète de tous les endpoints
-    - Interface Swagger UI interactive
-
-16. **Suivi GPS Livreur**
-    - Mise à jour de position en temps réel
-    - Suivi des commandes pour les clients
-    - Calcul automatique de l'ETA et de la distance
-    - Liste des livreurs disponibles (admin)
-
-17. **Sécurité**
-    - Authentification Sanctum
-    - Protection CSRF
-    - Validation des données
-    - Fichiers sensibles exclus de Git
-
-### ⚠️ Partiellement implémentées (à laisser pour le moment)
-
-- **Paiement Mobile Money** : Structure prête, simulation uniquement
-- **Webhook Stripe** : Structure de base, vérification de signature manquante
-
-### ❌ Laissées de côté (non prioritaires)
-
-- **Export des commandes** : Peut être ajouté plus tard si nécessaire
-
-## 🛠️ Technologies
-
-- **Framework** : Laravel 12.x
-- **PHP** : 8.2+
-- **Base de données** : MySQL/MariaDB
-- **Authentification** : Laravel Sanctum
-- **Paiements** : Stripe
-- **Notifications** : Firebase Cloud Messaging (FCM)
-- **Documentation** : Swagger/OpenAPI (L5-Swagger)
-- **PDF** : DomPDF
-- **Images** : Intervention Image
-
-## 📦 Prérequis
+### Prérequis
 
 - PHP 8.2 ou supérieur
 - Composer
-- MySQL/MariaDB
-- Node.js et npm (pour les assets)
-- Laragon (recommandé pour Windows) ou équivalent
+- MySQL
+- Node.js et npm
+- Laragon (recommandé pour Windows - perso ça me facilite la vie)
 
-## 🚀 Installation
+### Étapes
 
-### 1. Cloner le projet
-
+1. **Cloner le projet**
 ```bash
-git clone <url-du-repo>
+git clone https://github.com/iamrachking/api-chelsy-apk
 cd api-chelsy-apk
 ```
 
-### 2. Installer les dépendances
-
+2. **Installer les dépendances**
 ```bash
 composer install
 npm install
 ```
 
-### 3. Configuration de l'environnement
+3. **Configuration**
 
-Copiez le fichier `.env.example` vers `.env` :
-
+Copiez `.env.example` vers `.env` :
 ```bash
 cp .env.example .env
 ```
 
 Générez la clé d'application :
-
 ```bash
 php artisan key:generate
 ```
 
-### 4. Configuration de la base de données
+4. **Base de données**
 
-Éditez le fichier `.env` et configurez votre base de données :
-
+Configurez votre base de données dans `.env` :
 ```env
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -173,244 +83,151 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-### 5. Migrations et seeders
-
+Puis exécutez les migrations :
 ```bash
-php artisan migrate
-php artisan db:seed
+php artisan migrate --seed
 ```
 
-### 6. Configuration Firebase (pour les notifications push)
+5. **Firebase (notifications push)**
 
-#### Option 1 : Service Account JSON (Recommandé)
-
-1. Téléchargez le fichier JSON de votre projet Firebase
-2. Placez-le dans `storage/app/firebase-credentials.json`
-3. Configurez dans `.env` :
-
+Placez votre fichier JSON Firebase dans `storage/app/firebase-credentials.json` et ajoutez dans `.env` :
 ```env
 FIREBASE_CREDENTIALS_PATH=storage/app/firebase-credentials.json
 FIREBASE_PROJECT_ID=chelsy-restaurant
 ```
 
-#### Option 2 : Server Key (Alternative)
-
+Ou utilisez une Server Key :
 ```env
 FIREBASE_SERVER_KEY=votre_server_key_ici
 FIREBASE_PROJECT_ID=chelsy-restaurant
 ```
 
-⚠️ **Important** : Les fichiers Firebase sont exclus de Git (voir `.gitignore`)
+6. **Stripe (paiements)**
 
-### 7. Configuration Stripe (pour les paiements)
-
+Ajoutez vos clés Stripe dans `.env` :
 ```env
 STRIPE_KEY=pk_test_...
 STRIPE_SECRET=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
-### 8. Lien symbolique pour le stockage
-
+7. **Lien symbolique**
 ```bash
 php artisan storage:link
 ```
 
-### 9. Compiler les assets (si nécessaire)
-
+8. **Compiler les assets** (si nécessaire)
 ```bash
 npm run build
 ```
 
-## ⚙️ Configuration
+## Documentation API
 
-### Variables d'environnement importantes
+### Swagger
 
-```env
-APP_NAME="CHELSY Restaurant"
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://api-chelsy-apk.test
-
-# Base de données
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=chelsy_restaurant
-DB_USERNAME=root
-DB_PASSWORD=
-
-# Stripe
-STRIPE_KEY=
-STRIPE_SECRET=
-STRIPE_WEBHOOK_SECRET=
-
-# Firebase
-FIREBASE_CREDENTIALS_PATH=storage/app/firebase-credentials.json
-FIREBASE_SERVER_KEY=
-FIREBASE_PROJECT_ID=chelsy-restaurant
-
-# Mail (pour la réinitialisation de mot de passe)
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.mailtrap.io
-MAIL_PORT=2525
-MAIL_USERNAME=
-MAIL_PASSWORD=
-```
-
-## 📚 Documentation API
-
-### Génération de la documentation Swagger
-
+Générez la documentation :
 ```bash
 php artisan l5-swagger:generate
 ```
 
-Accédez à la documentation via : `http://api-chelsy-apk.test/api/documentation`
+Accédez à la documentation : `http://api-chelsy-apk.test/api/documentation`
 
-### Tester l'API avec REST Client
+### Tester avec REST Client
 
-Le fichier `CHELSY_API.http` contient tous les endpoints testables avec l'extension REST Client de VS Code.
+Le fichier `CHELSY_API.http` contient tous les endpoints testables. Vous pouvez utiliser REST Client ou un autre outil si vous avez du temps pour s'amuser.
 
 1. Installez l'extension "REST Client" dans VS Code
 2. Ouvrez `CHELSY_API.http`
 3. Suivez les étapes numérotées
-4. Après le login, copiez le token et collez-le dans la variable `@token`
+4. Après le login, copiez le token dans la variable `@token`
 
-### Endpoints principaux
+### Quelques endpoints
 
-#### Authentification
+**Authentification**
 - `POST /api/v1/register` - Inscription
 - `POST /api/v1/login` - Connexion
 - `POST /api/v1/logout` - Déconnexion
 - `GET /api/v1/me` - Utilisateur connecté
-- `POST /api/v1/forgot-password` - Mot de passe oublié
-- `POST /api/v1/reset-password` - Réinitialisation
 
-#### Commandes
+**Commandes**
 - `GET /api/v1/orders` - Liste des commandes
 - `POST /api/v1/orders` - Créer une commande
 - `GET /api/v1/orders/{id}` - Détails d'une commande
-- `POST /api/v1/orders/{id}/cancel` - Annuler une commande
-- `GET /api/v1/orders/{id}/tracking` - Suivi GPS (client)
+- `GET /api/v1/orders/{id}/tracking` - Suivi GPS
 
-#### Notifications FCM
+**Notifications**
 - `POST /api/v1/fcm-token` - Enregistrer le token FCM
 - `DELETE /api/v1/fcm-token` - Supprimer le token FCM
 
-#### Suivi GPS Livreur
+**Suivi GPS**
 - `POST /api/v1/delivery/position` - Mettre à jour la position (livreur)
-- `GET /api/v1/delivery/position/current` - Position actuelle (livreur)
-- `GET /api/v1/delivery/position/history` - Historique (livreur)
-- `GET /api/v1/delivery/drivers/available` - Liste livreurs (admin)
+- `GET /api/v1/orders/{order_id}/tracking` - Suivre une commande (client)
 
-Voir `CHELSY_API.http` pour la liste complète des endpoints.
+Voir `CHELSY_API.http` pour la liste complète.
 
-## 🧪 Tests
-
-```bash
-php artisan test
-```
-
-## 📁 Structure du projet
+## Structure du projet
 
 ```
-api-chelsy-apk/
-├── app/
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   │   ├── Api/V1/          # Contrôleurs API
-│   │   │   └── Admin/Web/       # Contrôleurs Admin
-│   │   ├── Middleware/           # Middlewares
-│   │   ├── Requests/            # Form Requests
-│   │   └── Resources/            # API Resources
-│   ├── Models/                   # Modèles Eloquent
-│   └── Services/                 # Services métier
-│       ├── NotificationService.php
-│       ├── PaymentService.php
-│       ├── DeliveryService.php
-│       └── InvoiceService.php
-├── database/
-│   ├── migrations/               # Migrations
-│   └── seeders/                 # Seeders
-├── routes/
-│   ├── api.php                   # Routes API
-│   └── web.php                   # Routes Web (Admin)
-├── resources/
-│   └── views/
-│       └── admin/                # Vues Blade (Admin)
-├── storage/
-│   └── app/
-│       └── firebase-credentials.json  # Fichier Firebase (à ajouter)
-├── CHELSY_API.http               # Fichier de test REST Client
-├── ETAT_FONCTIONNALITES.md       # État détaillé des fonctionnalités
-└── README.md                     # Ce fichier
+app/
+├── Http/Controllers/
+│   ├── Api/V1/          # Contrôleurs API
+│   └── Admin/Web/       # Contrôleurs Admin
+├── Models/              # Modèles Eloquent
+└── Services/            # Services métier
+    ├── NotificationService.php
+    ├── PaymentService.php
+    ├── DeliveryService.php
+    └── InvoiceService.php
+
+database/
+├── migrations/          # Migrations
+└── seeders/            # Seeders
+
+routes/
+├── api.php              # Routes API
+└── web.php              # Routes Web (Admin)
 ```
 
-## 📊 État des fonctionnalités
+## Commandes utiles
 
-Consultez le fichier `ETAT_FONCTIONNALITES.md` pour un état détaillé de toutes les fonctionnalités.
-
-**Résumé** :
-- ✅ **17 fonctionnalités complètes** (94%)
-- ⚠️ **2 fonctionnalités partiellement implémentées** (à laisser pour le moment)
-- ❌ **1 fonctionnalité laissée de côté** (non prioritaire)
-
-## 🔧 Commandes utiles
-
-### Générer la documentation Swagger
+**Documentation Swagger**
 ```bash
 php artisan l5-swagger:generate
 ```
 
-### Vider les caches
+**Vider les caches** (parfois ça m'embête mais c'est nécessaire)
 ```bash
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 ```
 
-### Migrations
+**Migrations**
 ```bash
 php artisan migrate
 php artisan migrate:rollback
 php artisan migrate:fresh --seed
 ```
 
-### Créer un utilisateur admin
-```bash
-php artisan tinker
-```
-Puis dans Tinker :
-```php
-User::create([
-    'firstname' => 'Admin',
-    'lastname' => 'User',
-    'email' => 'admin@chelsy.com',
-    'password' => Hash::make('password'),
-    'is_admin' => true,
-]);
-```
+## Compte admin par défaut
 
-## 🔐 Sécurité
+Après avoir exécuté les seeders :
+- Email : `admin@chelsy-restaurant.bj`
+- Mot de passe : `admin123`
 
-- Les fichiers Firebase sont exclus de Git (`.gitignore`)
-- Authentification via Laravel Sanctum
-- Protection CSRF activée
-- Validation des données sur tous les endpoints
-- Middleware de blocage utilisateur
+## Notes importantes
 
-## 📝 Licence
+- Les fichiers Firebase sont exclus de Git (voir `.gitignore`)
+- L'authentification utilise Laravel Sanctum
+- Tous les endpoints sont validés
+- Le middleware bloque les utilisateurs désactivés
 
-Ce projet est un projet académique.
+## Support
 
-## 👥 Support
+Pour toute question ou problème :
+- Documentation Swagger : `http://api-chelsy-apk.test/api/documentation`
+- Fichier `CHELSY_API.http` pour tester les endpoints avec REST Client
 
-Pour toute question ou problème, consultez :
-- La documentation Swagger : `http://api-chelsy-apk.test/api/documentation`
-- Le fichier `ETAT_FONCTIONNALITES.md` pour l'état des fonctionnalités
-- Le fichier `CHELSY_API.http` pour des exemples de requêtes
+En cas de problème, contactez-moi sur WhatsApp : https://wa.me/22991112763
 
----
-
-**Développé avec ❤️ pour CHELSY Restaurant**
+Développé pour CHELSY Restaurant

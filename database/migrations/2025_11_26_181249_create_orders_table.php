@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('restaurant_id')->constrained()->onDelete('cascade');
             $table->foreignId('address_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('driver_id')->nullable()->constrained('users')->onDelete('set null');
             $table->enum('type', ['delivery', 'pickup'])->default('delivery');
             $table->enum('status', [
                 'pending',
@@ -29,7 +30,7 @@ return new class extends Migration
             $table->decimal('delivery_fee', 10, 2)->default(0);
             $table->decimal('discount_amount', 10, 2)->default(0);
             $table->decimal('total', 10, 2);
-            $table->unsignedBigInteger('promo_code_id')->nullable();
+            $table->foreignId('promo_code_id')->nullable()->constrained('promo_codes')->onDelete('set null');
             $table->datetime('scheduled_at')->nullable(); // Heure de livraison/récupération souhaitée
             $table->datetime('delivered_at')->nullable();
             $table->text('cancellation_reason')->nullable();
