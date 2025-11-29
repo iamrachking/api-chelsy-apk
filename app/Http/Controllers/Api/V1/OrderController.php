@@ -307,7 +307,7 @@ class OrderController extends Controller
             }
 
             $responseData = [
-                'order' => new OrderResource($order->load(['restaurant', 'address', 'items.dish', 'payment'])),
+                'order' => new OrderResource($order->load(['restaurant', 'address', 'items.dish', 'payment', 'promoCode'])),
             ];
 
             // Ajouter les informations de paiement Stripe si nécessaire

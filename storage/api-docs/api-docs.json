@@ -158,6 +158,58 @@
             }
         },
         "/api/v1/addresses/{id}": {
+            "get": {
+                "tags": [
+                    "Adresses"
+                ],
+                "summary": "Détails d'une adresse",
+                "operationId": "f5f8e416d457384bd0b870fd03cf490b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'adresse",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'adresse",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "address": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Adresse non trouvée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
                     "Adresses"
@@ -523,13 +575,13 @@
                 ]
             }
         },
-        "/api/v1/user": {
+        "/api/v1/me": {
             "get": {
                 "tags": [
                     "Authentification"
                 ],
                 "summary": "Récupérer les informations de l'utilisateur connecté",
-                "operationId": "069342e9901b0d9a8d0a86993c227938",
+                "operationId": "13b43df400e475a157538f73617b8c3d",
                 "responses": {
                     "200": {
                         "description": "Informations de l'utilisateur",
@@ -2248,6 +2300,7 @@
                                 ],
                                 "properties": {
                                     "type": {
+                                        "description": "Type de commande : delivery (livraison) ou pickup (à emporter)",
                                         "type": "string",
                                         "enum": [
                                             "delivery",
@@ -2256,6 +2309,7 @@
                                         "example": "delivery"
                                     },
                                     "address_id": {
+                                        "description": "ID de l'adresse (requis si type=delivery)",
                                         "type": "integer",
                                         "example": 1,
                                         "nullable": true
@@ -2270,6 +2324,7 @@
                                         "example": "card"
                                     },
                                     "mobile_money_provider": {
+                                        "description": "Fournisseur Mobile Money (requis si payment_method=mobile_money)",
                                         "type": "string",
                                         "enum": [
                                             "MTN",
@@ -2278,6 +2333,7 @@
                                         "nullable": true
                                     },
                                     "mobile_money_number": {
+                                        "description": "Numéro Mobile Money (requis si payment_method=mobile_money)",
                                         "type": "string",
                                         "example": "+229 12 34 56 78",
                                         "nullable": true
@@ -2290,9 +2346,11 @@
                                     "scheduled_at": {
                                         "type": "string",
                                         "format": "datetime",
+                                        "example": "2025-11-27 19:00:00",
                                         "nullable": true
                                     },
                                     "special_instructions": {
+                                        "description": "Instructions spéciales pour la commande",
                                         "type": "string",
                                         "example": "Sonner 2 fois",
                                         "nullable": true

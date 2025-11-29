@@ -12,7 +12,7 @@
 
 ### Variables (Modifiez ces valeurs si nécessaire)
 @base_url = http://api-chelsy-apk.test/api/v1
-@token = VOTRE_TOKEN_ICI_APRES_LOGIN
+@token =10|QMFG6xjlTLXxb8UwbQEbuMt2lJt5gymVgBK8VSHC239d889d
 
 ### ============================================
 ### ÉTAPE 1 : AUTHENTIFICATION
@@ -26,7 +26,7 @@ Content-Type: application/json
 {
   "firstname": "Test",
   "lastname": "User",
-  "email": "test.user@example.com",
+  "email": "test.usero@example.com",
   "password": "password123",
   "password_confirmation": "password123",
   "phone": "+229 12 34 56 78"
@@ -37,7 +37,7 @@ POST {{base_url}}/login
 Content-Type: application/json
 
 {
-  "email": "test.user@example.com",
+  "email": "test.usero@example.com",
   "password": "password123"
 }
 
@@ -176,11 +176,11 @@ Content-Type: application/json
 }
 
 ### 7.3 Get Address - Détails d'une adresse
-GET {{base_url}}/addresses/1
+GET {{base_url}}/addresses/11
 Authorization: Bearer {{token}}
 
 ### 7.4 Update Address - Modifier une adresse
-PUT {{base_url}}/addresses/1
+PUT {{base_url}}/addresses/9
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -194,7 +194,7 @@ Content-Type: application/json
 }
 
 ### 7.5 Delete Address - Supprimer une adresse
-DELETE {{base_url}}/addresses/1
+DELETE {{base_url}}/addresses/9
 Authorization: Bearer {{token}}
 
 ### ============================================
@@ -218,7 +218,7 @@ Content-Type: application/json
 }
 
 ### 8.3 Update Cart Item - Modifier un article du panier
-PUT {{base_url}}/cart/items/1
+PUT {{base_url}}/cart/items/5
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -253,7 +253,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 1,
+  "address_id": 11,
   "payment_method": "cash"
 }
 
@@ -266,7 +266,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 1,
+  "address_id": 11,
   "payment_method": "card",
   "scheduled_at": "2025-11-27 19:00:00",
   "special_instructions": "Livrer à la porte"
@@ -279,7 +279,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 1,
+  "address_id": 11,
   "payment_method": "mobile_money",
   "mobile_money_provider": "MTN",
   "mobile_money_number": "+229 12 34 56 78"
@@ -292,7 +292,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 1,
+  "address_id": 11,
   "payment_method": "cash",
   "promo_code": "PROMO10"
 }
@@ -309,44 +309,47 @@ Content-Type: application/json
 }
 
 ### 9.6 Get Order - Détails d'une commande
-GET {{base_url}}/orders/1
+GET {{base_url}}/orders/5
 Authorization: Bearer {{token}}
 
 ### 9.7 Cancel Order - Annuler une commande
-POST {{base_url}}/orders/1/cancel
+POST {{base_url}}/orders/5/cancel
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "cancellation_reason": "Changement d'avis"
+  "reason": "Changement d'avis"
 }
 
 ### 9.8 Get Invoice (Base64) - Facture en base64
-GET {{base_url}}/orders/1/invoice
+GET {{base_url}}/orders/4/invoice
 Authorization: Bearer {{token}}
 
 ### 9.9 Download Invoice - Télécharger la facture PDF
-GET {{base_url}}/orders/1/invoice/download
+GET {{base_url}}/orders/5/invoice/download
 Authorization: Bearer {{token}}
 
 ### 9.10 Reorder - Recommander une commande
-POST {{base_url}}/orders/1/reorder
+POST {{base_url}}/orders/5/reorder
 Authorization: Bearer {{token}}
 
 ### ============================================
 ### ÉTAPE 10 : PAIEMENTS (AUTHENTIFIÉ)
 ### ============================================
-### IMPORTANT : Créez d'abord une commande avec payment_method: "card" (9.3)
+### IMPORTANT : 
+### 1. Créez d'abord une commande avec payment_method: "card" (9.3)
+### 2. La réponse de 9.3 contiendra un objet "payment" avec "payment_intent_id"
+### 3. Copiez ce payment_intent_id et l'order_id pour utiliser dans 10.1
 
 ### 10.1 Confirm Stripe Payment - Confirmer un paiement Stripe
-### NOTE : Utilisez le payment_intent_id retourné lors de la création de commande (9.3)
+### NOTE : Remplacez "ORDER_ID" et "PAYMENT_INTENT_ID" par les vraies valeurs de la réponse 9.3
 POST {{base_url}}/payments/confirm-stripe
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "order_id": 1,
-  "payment_intent_id": "pi_xxxxxxxxxxxxx"
+  "order_id": ORDER_ID,
+  "payment_intent_id": "PAYMENT_INTENT_ID"
 }
 
 ### ============================================
@@ -363,7 +366,7 @@ Content-Type: application/json
   "order_id": 1,
   "dish_id": 1,
   "restaurant_rating": 5,
-  "dish_rating": 5,
+  "rating": 5,
   "delivery_rating": 4,
   "comment": "Excellent service, plat délicieux !",
   "images": []
@@ -383,7 +386,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "dish_id": 1
+  "dish_id": 2
 }
 
 ### 12.3 Remove Favorite - Supprimer un favori

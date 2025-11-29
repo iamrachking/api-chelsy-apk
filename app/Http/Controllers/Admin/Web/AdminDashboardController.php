@@ -652,12 +652,22 @@ class AdminDashboardController extends Controller
             'type' => 'required|in:percentage,fixed',
             'value' => 'required|numeric|min:0',
             'minimum_order_amount' => 'nullable|numeric|min:0',
-            'starts_at' => 'required|date',
-            'expires_at' => 'required|date|after:starts_at',
+            'starts_at' => 'nullable|date',
+            'expires_at' => 'required|date',
             'max_uses' => 'nullable|integer|min:1',
             'max_uses_per_user' => 'nullable|integer|min:1',
             'is_active' => 'nullable|boolean',
         ]);
+
+        // Si starts_at n'est pas fourni, utiliser la date/heure actuelle
+        if (empty($validated['starts_at'])) {
+            $validated['starts_at'] = now();
+        }
+
+        // Vérifier que expires_at est après starts_at
+        if (isset($validated['expires_at']) && $validated['expires_at'] <= $validated['starts_at']) {
+            return redirect()->back()->withErrors(['expires_at' => 'La date d\'expiration doit être après la date de début.'])->withInput();
+        }
 
         // Convertir les valeurs boolean
         $validated['is_active'] = $request->has('is_active') ? (bool)$request->is_active : true;
@@ -698,12 +708,22 @@ class AdminDashboardController extends Controller
             'type' => 'required|in:percentage,fixed',
             'value' => 'required|numeric|min:0',
             'minimum_order_amount' => 'nullable|numeric|min:0',
-            'starts_at' => 'required|date',
-            'expires_at' => 'required|date|after:starts_at',
+            'starts_at' => 'nullable|date',
+            'expires_at' => 'required|date',
             'max_uses' => 'nullable|integer|min:1',
             'max_uses_per_user' => 'nullable|integer|min:1',
             'is_active' => 'nullable|boolean',
         ]);
+
+        // Si starts_at n'est pas fourni, utiliser la date/heure actuelle
+        if (empty($validated['starts_at'])) {
+            $validated['starts_at'] = now();
+        }
+
+        // Vérifier que expires_at est après starts_at
+        if (isset($validated['expires_at']) && $validated['expires_at'] <= $validated['starts_at']) {
+            return redirect()->back()->withErrors(['expires_at' => 'La date d\'expiration doit être après la date de début.'])->withInput();
+        }
 
         // Convertir les valeurs boolean
         $validated['is_active'] = $request->has('is_active') ? (bool)$request->is_active : false;

@@ -91,10 +91,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-gray-700 text-sm font-semibold mb-2" for="starts_at">
-                        <i class="fas fa-calendar-alt text-blue-500 mr-2"></i>Valide du *
+                        <i class="fas fa-calendar-alt text-blue-500 mr-2"></i>Valide du
                     </label>
                     <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
-                           id="starts_at" type="datetime-local" name="starts_at" value="{{ old('starts_at') }}" required>
+                           id="starts_at" type="datetime-local" name="starts_at" value="{{ old('starts_at') }}">
+                    <p class="text-xs text-gray-500 mt-1">Laissez vide pour activer immédiatement</p>
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-semibold mb-2" for="expires_at">

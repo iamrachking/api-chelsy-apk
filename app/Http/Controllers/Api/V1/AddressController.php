@@ -96,6 +96,45 @@ class AddressController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/v1/addresses/{id}",
+     *     summary="Détails d'une adresse",
+     *     tags={"Adresses"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID de l'adresse",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails de l'adresse",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object", @OA\Property(property="address", type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Adresse non trouvée"
+     *     )
+     * )
+     */
+    public function show(Request $request, $id)
+    {
+        $address = $request->user()->addresses()->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'address' => $address,
+            ]
+        ]);
+    }
+
+    /**
      * @OA\Put(
      *     path="/api/v1/addresses/{id}",
      *     summary="Mettre à jour une adresse",
