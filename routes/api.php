@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V1\PromoCodeController;
 use App\Http\Controllers\Api\V1\FAQController;
 use App\Http\Controllers\Api\V1\ComplaintController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\FcmTokenController;
+use App\Http\Controllers\Api\V1\DeliveryTrackingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -106,4 +108,15 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
     Route::get('/complaints', [ComplaintController::class, 'index']);
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::get('/complaints/{id}', [ComplaintController::class, 'show']);
+
+    // Notifications FCM
+    Route::post('/fcm-token', [FcmTokenController::class, 'store']);
+    Route::delete('/fcm-token', [FcmTokenController::class, 'destroy']);
+
+    // Suivi GPS Livreur
+    Route::post('/delivery/position', [DeliveryTrackingController::class, 'updatePosition']);
+    Route::get('/delivery/position/current', [DeliveryTrackingController::class, 'getCurrentPosition']);
+    Route::get('/delivery/position/history', [DeliveryTrackingController::class, 'getPositionHistory']);
+    Route::get('/orders/{order_id}/tracking', [DeliveryTrackingController::class, 'getOrderTracking']);
+    Route::get('/delivery/drivers/available', [DeliveryTrackingController::class, 'getAvailableDrivers']);
 });

@@ -435,14 +435,72 @@ Content-Type: application/json
 
 {
   "order_id": 1,
-  "type": "quality",
   "subject": "Plat froid",
-  "description": "Le plat était froid à la livraison",
-  "images": []
+  "message": "Le plat était froid à la livraison"
 }
 
 ### 14.3 Get Complaint - Détails d'une réclamation
 GET {{base_url}}/complaints/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 15 : NOTIFICATIONS FCM (AUTHENTIFIÉ)
+### ============================================
+### IMPORTANT : Ces endpoints permettent à l'app mobile d'enregistrer son token FCM
+### pour recevoir les notifications push
+
+### 15.1 Register FCM Token - Enregistrer le token FCM
+### NOTE : L'app mobile doit appeler cet endpoint après le login pour recevoir les notifications
+POST {{base_url}}/fcm-token
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "fcm_token_obtenu_depuis_firebase_messaging"
+}
+
+### 15.2 Delete FCM Token - Supprimer le token FCM (déconnexion)
+### NOTE : L'app mobile doit appeler cet endpoint lors de la déconnexion
+DELETE {{base_url}}/fcm-token
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÉTAPE 16 : SUIVI GPS LIVREUR (AUTHENTIFIÉ)
+### ============================================
+### IMPORTANT : Ces endpoints permettent le suivi GPS des livreurs
+### Pour les livreurs : mettre à jour leur position
+### Pour les clients : suivre la position du livreur pour leur commande
+
+### 16.1 Update Driver Position - Mettre à jour la position GPS (Livreur uniquement)
+### NOTE : L'app mobile du livreur doit appeler cet endpoint régulièrement (toutes les 30 secondes par exemple)
+POST {{base_url}}/delivery/position
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "latitude": 6.372477,
+  "longitude": 2.354006,
+  "order_id": 1,
+  "accuracy": 10.5,
+  "speed": 45.0,
+  "heading": 180.0
+}
+
+### 16.2 Get Current Position - Récupérer la position actuelle (Livreur uniquement)
+GET {{base_url}}/delivery/position/current
+Authorization: Bearer {{token}}
+
+### 16.3 Get Position History - Historique des positions (Livreur uniquement)
+GET {{base_url}}/delivery/position/history?order_id=1&minutes=60&per_page=50
+Authorization: Bearer {{token}}
+
+### 16.4 Get Order Tracking - Suivre la position du livreur pour une commande (Client)
+### NOTE : Le client peut suivre la position du livreur pour sa commande en cours de livraison
+GET {{base_url}}/orders/1/tracking
+Authorization: Bearer {{token}}
+
+### 16.5 Get Available Drivers - Liste des livreurs disponibles (Admin uniquement)
+GET {{base_url}}/delivery/drivers/available
 Authorization: Bearer {{token}}
 
 ### ============================================

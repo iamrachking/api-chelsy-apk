@@ -7,6 +7,12 @@ use App\Http\Resources\Api\V1\DishResource;
 use App\Models\Dish;
 use Illuminate\Http\Request;
 
+/**
+ * @OA\Tag(
+ *     name="Plats",
+ *     description="Endpoints pour la gestion des plats"
+ * )
+ */
 class DishController extends Controller
 {
     /**
@@ -104,7 +110,14 @@ class DishController extends Controller
      *             @OA\Property(property="data", type="object", @OA\Property(property="dish", type="object"))
      *         )
      *     ),
-     *     @OA\Response(response=404, description="Plat non trouvé")
+     *     @OA\Response(
+     *         response=404,
+     *         description="Plat non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Plat non trouvé")
+     *         )
+     *     )
      * )
      */
     public function show($id)

@@ -41,4 +41,10 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'firebase' => [
+        'credentials_path' => env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase-credentials.json')),
+        'server_key' => env('FIREBASE_SERVER_KEY'), // Alternative si pas de Service Account
+        'project_id' => env('FIREBASE_PROJECT_ID', 'chelsy-restaurant'),
+    ],
+
 ];

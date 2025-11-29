@@ -12,8 +12,10 @@ use App\Models\Restaurant;
 use App\Services\DeliveryService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -291,6 +293,18 @@ class OrderController extends Controller
             $cart->items()->delete();
 
             DB::commit();
+
+            // Envoyer une notification de confirmation de commande
+            try {
+                $notificationService = new NotificationService();
+                $notificationService->sendOrderStatusUpdate($user, $order->fresh(), 'pending');
+            } catch (\Exception $e) {
+                // Ne pas faire échouer la commande si la notification échoue
+                Log::error('Erreur lors de l\'envoi de notification de commande', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             $responseData = [
                 'order' => new OrderResource($order->load(['restaurant', 'address', 'items.dish', 'payment'])),

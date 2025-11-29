@@ -26,6 +26,9 @@ class User extends Authenticatable
         'last_login_at',
         'is_admin',
         'is_blocked',
+        'is_driver',
+        'fcm_token',
+        'fcm_token_updated_at',
     ];
 
     protected $hidden = [
@@ -40,9 +43,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'birth_date' => 'date',
             'last_login_at' => 'datetime',
+            'fcm_token_updated_at' => 'datetime',
             'email_verified' => 'boolean',
             'is_admin' => 'boolean',
             'is_blocked' => 'boolean',
+            'is_driver' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -86,6 +91,16 @@ class User extends Authenticatable
     public function promoCodeUsages()
     {
         return $this->hasMany(PromoCodeUsage::class);
+    }
+
+    public function deliveryPositions()
+    {
+        return $this->hasMany(DeliveryPosition::class, 'driver_id');
+    }
+
+    public function assignedOrders()
+    {
+        return $this->hasMany(Order::class, 'driver_id');
     }
 
     // Accessor pour le nom complet

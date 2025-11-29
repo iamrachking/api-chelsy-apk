@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\PaymentService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -73,11 +75,25 @@ class PaymentController extends Controller
         $result = $paymentService->confirmStripePayment($request->payment_intent_id, $order);
 
         if ($result['success']) {
+            $order->refresh();
+            
+            // Envoyer une notification de confirmation de paiement
+            try {
+                $notificationService = new NotificationService();
+                $notificationService->sendPaymentConfirmation($request->user(), $order);
+            } catch (\Exception $e) {
+                // Ne pas faire échouer le paiement si la notification échoue
+                Log::error('Erreur lors de l\'envoi de notification de paiement', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
                 'data' => [
-                    'order' => $order->fresh()->load(['restaurant', 'address', 'items.dish', 'payment']),
+                    'order' => $order->load(['restaurant', 'address', 'items.dish', 'payment']),
                 ]
             ]);
         }

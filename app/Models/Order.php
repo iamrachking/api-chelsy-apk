@@ -11,6 +11,7 @@ class Order extends Model
     protected $fillable = [
         'order_number',
         'user_id',
+        'driver_id',
         'restaurant_id',
         'address_id',
         'type',
@@ -44,6 +45,11 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'driver_id');
+    }
+
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
@@ -72,6 +78,16 @@ class Order extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function deliveryPositions(): HasMany
+    {
+        return $this->hasMany(DeliveryPosition::class);
+    }
+
+    public function latestPosition()
+    {
+        return $this->hasOne(DeliveryPosition::class)->latestOfMany('recorded_at');
     }
 
     // Scopes

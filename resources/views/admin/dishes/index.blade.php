@@ -17,10 +17,16 @@ use Illuminate\Support\Facades\Storage;
                 </h1>
                 <p class="text-gray-500 mt-1">Gérez les plats de votre menu</p>
             </div>
-            <a href="{{ route('admin.dishes.create') }}" class="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
-                <i class="fas fa-plus mr-2"></i>
-                Nouveau Plat
-            </a>
+            <div class="flex gap-3">
+                <a href="{{ route('admin.dishes.create') }}" class="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                    <i class="fas fa-plus mr-2"></i>
+                    Nouveau Plat
+                </a>
+                <a href="{{ route('admin.dishes.import') }}" class="flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                    <i class="fas fa-file-import mr-2"></i>
+                    Importer
+                </a>
+            </div>
         </div>
 
         <div class="overflow-x-auto">

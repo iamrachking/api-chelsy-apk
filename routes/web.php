@@ -44,6 +44,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/categories', [AdminDashboardController::class, 'categories'])->name('categories');
         Route::get('/categories/create', [AdminDashboardController::class, 'createCategory'])->name('categories.create');
         Route::post('/categories', [AdminDashboardController::class, 'storeCategory'])->name('categories.store');
+        Route::get('/categories/import', [AdminDashboardController::class, 'showImportCategories'])->name('categories.import');
+        Route::post('/categories/import', [AdminDashboardController::class, 'importCategories'])->name('categories.import.store');
         Route::get('/categories/{id}/edit', [AdminDashboardController::class, 'editCategory'])->name('categories.edit');
         Route::put('/categories/{id}', [AdminDashboardController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{id}', [AdminDashboardController::class, 'deleteCategory'])->name('categories.delete');
@@ -52,6 +54,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dishes', [AdminDashboardController::class, 'dishes'])->name('dishes');
         Route::get('/dishes/create', [AdminDashboardController::class, 'createDish'])->name('dishes.create');
         Route::post('/dishes', [AdminDashboardController::class, 'storeDish'])->name('dishes.store');
+        Route::get('/dishes/import', [AdminDashboardController::class, 'showImportDishes'])->name('dishes.import');
+        Route::post('/dishes/import', [AdminDashboardController::class, 'importDishes'])->name('dishes.import.store');
         Route::get('/dishes/{id}', [AdminDashboardController::class, 'showDish'])->name('dishes.show');
         Route::get('/dishes/{id}/edit', [AdminDashboardController::class, 'editDish'])->name('dishes.edit');
         Route::put('/dishes/{id}', [AdminDashboardController::class, 'updateDish'])->name('dishes.update');

@@ -88,6 +88,20 @@ class ComplaintController extends Controller
             ], 422);
         }
 
+        // Vérifier que la commande appartient à l'utilisateur si order_id est fourni
+        if ($request->order_id) {
+            $order = \App\Models\Order::where('id', $request->order_id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La commande spécifiée n\'existe pas ou ne vous appartient pas',
+                ], 403);
+            }
+        }
+
         $complaint = Complaint::create([
             'user_id' => $request->user()->id,
             'order_id' => $request->order_id,
@@ -100,7 +114,7 @@ class ComplaintController extends Controller
             'success' => true,
             'message' => 'Réclamation soumise avec succès',
             'data' => [
-                'complaint' => $complaint,
+                'complaint' => $complaint->load('order'),
             ]
         ], 201);
     }

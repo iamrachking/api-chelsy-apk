@@ -13,6 +13,7 @@ use App\Models\PromoCode;
 use App\Models\FAQ;
 use App\Models\Complaint;
 use App\Services\ImageService;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -302,6 +303,18 @@ class AdminDashboardController extends Controller
         $validated['is_available'] = $request->has('is_available');
         $validated['is_featured'] = $request->has('is_featured');
 
+        // Générer le slug si non fourni
+        if (!isset($validated['slug']) || empty($validated['slug'])) {
+            $validated['slug'] = Str::slug($validated['name']);
+            // S'assurer que le slug est unique
+            $baseSlug = $validated['slug'];
+            $counter = 1;
+            while (Dish::where('slug', $validated['slug'])->exists()) {
+                $validated['slug'] = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+        }
+
         Dish::create($validated);
 
         return redirect()->route('admin.dishes')->with('success', 'Plat créé avec succès');
@@ -579,8 +592,23 @@ class AdminDashboardController extends Controller
 
     public function updateOrderStatus(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with('user')->findOrFail($id);
+        $oldStatus = $order->status;
         $order->update(['status' => $request->status]);
+
+        // Envoyer une notification si le statut a changé
+        if ($oldStatus !== $request->status && $order->user) {
+            try {
+                $notificationService = new NotificationService();
+                $notificationService->sendOrderStatusUpdate($order->user, $order->fresh(), $request->status);
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de notification de changement de statut', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return redirect()->back()->with('success', 'Statut de la commande mis à jour');
     }
 
@@ -870,11 +898,16 @@ class AdminDashboardController extends Controller
 
     // ========== RÉCLAMATIONS ==========
     
-    public function complaints()
+    public function complaints(Request $request)
     {
-        $complaints = Complaint::with(['user', 'order'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        $query = Complaint::with(['user', 'order']);
+
+        // Filtre par statut si fourni
+        if ($request->has('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        $complaints = $query->orderBy('created_at', 'desc')->paginate(15);
         
         $stats = [
             'total' => Complaint::count(),
@@ -897,7 +930,7 @@ class AdminDashboardController extends Controller
         $complaint = Complaint::findOrFail($id);
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,in_progress,resolved',
+            'status' => 'required|in:pending,in_progress,resolved,closed',
             'admin_response' => 'nullable|string|max:2000',
         ]);
 
@@ -907,12 +940,297 @@ class AdminDashboardController extends Controller
             $complaint->admin_response = $validated['admin_response'];
         }
 
-        if ($validated['status'] === 'resolved' && !$complaint->resolved_at) {
+        if (in_array($validated['status'], ['resolved', 'closed']) && !$complaint->resolved_at) {
             $complaint->resolved_at = now();
         }
 
         $complaint->save();
 
+        // Envoyer une notification si une réponse admin a été ajoutée ou si le statut a changé
+        if (isset($validated['admin_response']) && $complaint->user) {
+            try {
+                $notificationService = new NotificationService();
+                $notificationService->sendComplaintResponse($complaint->user, $complaint->fresh());
+            } catch (\Exception $e) {
+                Log::error('Erreur lors de l\'envoi de notification de réponse à la réclamation', [
+                    'complaint_id' => $complaint->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return redirect()->route('admin.complaints.show', $id)->with('success', 'Statut de la réclamation mis à jour avec succès');
+    }
+
+    // ========== IMPORT DE DONNÉES ==========
+    
+    public function showImportCategories()
+    {
+        return view('admin.categories.import');
+    }
+
+    public function importCategories(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:csv,txt|max:5120', // 5MB max
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), 'r');
+        
+        // Lire la première ligne (en-têtes)
+        $headers = fgetcsv($handle, 1000, ';');
+        if (!$headers) {
+            return redirect()->back()->with('error', 'Le fichier CSV est vide ou invalide.');
+        }
+
+        // Normaliser les en-têtes (supprimer les espaces, convertir en minuscules)
+        $headers = array_map('trim', $headers);
+        $headers = array_map('strtolower', $headers);
+
+        $expectedHeaders = ['nom', 'slug', 'description', 'ordre', 'actif'];
+        $headerMap = [];
+        
+        foreach ($expectedHeaders as $expected) {
+            $index = array_search($expected, $headers);
+            if ($index !== false) {
+                $headerMap[$expected] = $index;
+            }
+        }
+
+        if (empty($headerMap)) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'Format de fichier invalide. Les colonnes attendues sont : Nom, Slug, Description, Ordre, Actif');
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $errors = [];
+        $lineNumber = 1;
+
+        while (($row = fgetcsv($handle, 1000, ';')) !== false) {
+            $lineNumber++;
+            
+            if (count($row) < 2) {
+                continue; // Ignorer les lignes vides
+            }
+
+            try {
+                $name = isset($headerMap['nom']) && isset($row[$headerMap['nom']]) ? trim($row[$headerMap['nom']]) : null;
+                $slug = isset($headerMap['slug']) && isset($row[$headerMap['slug']]) ? trim($row[$headerMap['slug']]) : null;
+                $description = isset($headerMap['description']) && isset($row[$headerMap['description']]) ? trim($row[$headerMap['description']]) : null;
+                $order = isset($headerMap['ordre']) && isset($row[$headerMap['ordre']]) ? (int)trim($row[$headerMap['ordre']]) : 0;
+                $isActive = isset($headerMap['actif']) && isset($row[$headerMap['actif']]) ? 
+                    (in_array(strtolower(trim($row[$headerMap['actif']])), ['1', 'true', 'oui', 'yes', 'o', 'y']) ? true : false) : true;
+
+                if (!$name) {
+                    $errors[] = "Ligne $lineNumber : Le nom est obligatoire";
+                    continue;
+                }
+
+                // Générer le slug si non fourni
+                if (!$slug) {
+                    $slug = Str::slug($name);
+                }
+
+                // Vérifier si la catégorie existe déjà
+                $category = Category::where('slug', $slug)->first();
+
+                if ($category) {
+                    // Mise à jour
+                    $category->update([
+                        'name' => $name,
+                        'description' => $description,
+                        'order' => $order,
+                        'is_active' => $isActive,
+                    ]);
+                    $updated++;
+                } else {
+                    // Création
+                    Category::create([
+                        'name' => $name,
+                        'slug' => $slug,
+                        'description' => $description,
+                        'order' => $order,
+                        'is_active' => $isActive,
+                    ]);
+                    $imported++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Ligne $lineNumber : " . $e->getMessage();
+            }
+        }
+
+        fclose($handle);
+
+        $message = "Import terminé : $imported catégorie(s) créée(s), $updated catégorie(s) mise(s) à jour.";
+        if (!empty($errors)) {
+            $message .= " " . count($errors) . " erreur(s) : " . implode(', ', array_slice($errors, 0, 5));
+            if (count($errors) > 5) {
+                $message .= " et " . (count($errors) - 5) . " autre(s) erreur(s).";
+            }
+            return redirect()->back()->with('warning', $message);
+        }
+
+        return redirect()->route('admin.categories')->with('success', $message);
+    }
+
+    public function showImportDishes()
+    {
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        return view('admin.dishes.import', compact('categories'));
+    }
+
+    public function importDishes(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:csv,txt|max:10240', // 10MB max
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), 'r');
+        
+        // Lire la première ligne (en-têtes)
+        $headers = fgetcsv($handle, 1000, ';');
+        if (!$headers) {
+            return redirect()->back()->with('error', 'Le fichier CSV est vide ou invalide.');
+        }
+
+        // Normaliser les en-têtes
+        $headers = array_map('trim', $headers);
+        $headers = array_map('strtolower', $headers);
+
+        $expectedHeaders = ['nom', 'categorie', 'prix', 'prix_promotion', 'description', 'temps_preparation', 'disponible', 'mis_en_avant', 'nouveau', 'vegetarien', 'specialite'];
+        $headerMap = [];
+        
+        foreach ($expectedHeaders as $expected) {
+            $index = array_search($expected, $headers);
+            if ($index !== false) {
+                $headerMap[$expected] = $index;
+            }
+        }
+
+        if (empty($headerMap) || !isset($headerMap['nom']) || !isset($headerMap['categorie']) || !isset($headerMap['prix'])) {
+            fclose($handle);
+            return redirect()->back()->with('error', 'Format de fichier invalide. Les colonnes obligatoires sont : Nom, Catégorie, Prix');
+        }
+
+        $imported = 0;
+        $updated = 0;
+        $errors = [];
+        $lineNumber = 1;
+
+        while (($row = fgetcsv($handle, 1000, ';')) !== false) {
+            $lineNumber++;
+            
+            if (count($row) < 3) {
+                continue;
+            }
+
+            try {
+                $name = isset($headerMap['nom']) && isset($row[$headerMap['nom']]) ? trim($row[$headerMap['nom']]) : null;
+                $categoryName = isset($headerMap['categorie']) && isset($row[$headerMap['categorie']]) ? trim($row[$headerMap['categorie']]) : null;
+                $price = isset($headerMap['prix']) && isset($row[$headerMap['prix']]) ? trim($row[$headerMap['prix']]) : null;
+
+                if (!$name || !$categoryName || !$price) {
+                    $errors[] = "Ligne $lineNumber : Nom, Catégorie et Prix sont obligatoires";
+                    continue;
+                }
+
+                // Trouver ou créer la catégorie
+                $category = Category::where('name', $categoryName)
+                    ->orWhere('slug', Str::slug($categoryName))
+                    ->first();
+
+                if (!$category) {
+                    $errors[] = "Ligne $lineNumber : Catégorie '$categoryName' introuvable. Veuillez d'abord créer cette catégorie.";
+                    continue;
+                }
+
+                // Valider le prix
+                $price = str_replace([' ', ','], ['', '.'], $price);
+                if (!is_numeric($price) || $price < 0) {
+                    $errors[] = "Ligne $lineNumber : Prix invalide ($price)";
+                    continue;
+                }
+
+                $discountPrice = null;
+                if (isset($headerMap['prix_promotion']) && isset($row[$headerMap['prix_promotion']]) && trim($row[$headerMap['prix_promotion']])) {
+                    $discountPrice = str_replace([' ', ','], ['', '.'], trim($row[$headerMap['prix_promotion']]));
+                    if (is_numeric($discountPrice) && $discountPrice >= 0) {
+                        $discountPrice = (float)$discountPrice;
+                    } else {
+                        $discountPrice = null;
+                    }
+                }
+
+                $description = isset($headerMap['description']) && isset($row[$headerMap['description']]) ? trim($row[$headerMap['description']]) : null;
+                $preparationTime = isset($headerMap['temps_preparation']) && isset($row[$headerMap['temps_preparation']]) ? (int)trim($row[$headerMap['temps_preparation']]) : 30;
+                $isAvailable = isset($headerMap['disponible']) && isset($row[$headerMap['disponible']]) ? 
+                    (in_array(strtolower(trim($row[$headerMap['disponible']])), ['1', 'true', 'oui', 'yes', 'o', 'y']) ? true : false) : true;
+                $isFeatured = isset($headerMap['mis_en_avant']) && isset($row[$headerMap['mis_en_avant']]) ? 
+                    (in_array(strtolower(trim($row[$headerMap['mis_en_avant']])), ['1', 'true', 'oui', 'yes', 'o', 'y']) ? true : false) : false;
+                $isNew = isset($headerMap['nouveau']) && isset($row[$headerMap['nouveau']]) ? 
+                    (in_array(strtolower(trim($row[$headerMap['nouveau']])), ['1', 'true', 'oui', 'yes', 'o', 'y']) ? true : false) : false;
+                $isVegetarian = isset($headerMap['vegetarien']) && isset($row[$headerMap['vegetarien']]) ? 
+                    (in_array(strtolower(trim($row[$headerMap['vegetarien']])), ['1', 'true', 'oui', 'yes', 'o', 'y']) ? true : false) : false;
+                $isSpecialty = isset($headerMap['specialite']) && isset($row[$headerMap['specialite']]) ? 
+                    (in_array(strtolower(trim($row[$headerMap['specialite']])), ['1', 'true', 'oui', 'yes', 'o', 'y']) ? true : false) : false;
+
+                $slug = Str::slug($name);
+                
+                // Vérifier si le plat existe déjà (avant de générer un slug unique)
+                $dish = Dish::where('slug', $slug)->first();
+                
+                // S'assurer que le slug est unique si on crée un nouveau plat
+                if (!$dish) {
+                    $baseSlug = $slug;
+                    $counter = 1;
+                    while (Dish::where('slug', $slug)->exists()) {
+                        $slug = $baseSlug . '-' . $counter;
+                        $counter++;
+                    }
+                }
+
+                $data = [
+                    'category_id' => $category->id,
+                    'name' => $name,
+                    'slug' => $slug,
+                    'description' => $description,
+                    'price' => (float)$price,
+                    'discount_price' => $discountPrice,
+                    'preparation_time_minutes' => $preparationTime,
+                    'is_available' => $isAvailable,
+                    'is_featured' => $isFeatured,
+                    'is_new' => $isNew,
+                    'is_vegetarian' => $isVegetarian,
+                    'is_specialty' => $isSpecialty,
+                    'images' => [],
+                ];
+
+                if ($dish) {
+                    $dish->update($data);
+                    $updated++;
+                } else {
+                    Dish::create($data);
+                    $imported++;
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Ligne $lineNumber : " . $e->getMessage();
+            }
+        }
+
+        fclose($handle);
+
+        $message = "Import terminé : $imported plat(s) créé(s), $updated plat(s) mis à jour.";
+        if (!empty($errors)) {
+            $message .= " " . count($errors) . " erreur(s) : " . implode(', ', array_slice($errors, 0, 5));
+            if (count($errors) > 5) {
+                $message .= " et " . (count($errors) - 5) . " autre(s) erreur(s).";
+            }
+            return redirect()->back()->with('warning', $message);
+        }
+
+        return redirect()->route('admin.dishes')->with('success', $message);
     }
 }
