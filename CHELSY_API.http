@@ -245,44 +245,31 @@ GET {{base_url}}/orders
 Authorization: Bearer {{token}}
 
 ### 9.2 Create Order (Cash Payment) - Créer commande avec paiement espèces
+### NOTE : La commande utilise automatiquement le contenu du panier de l'utilisateur
+### Assurez-vous d'avoir ajouté des articles au panier (Étape 8) avant de créer une commande
 POST {{base_url}}/orders
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "restaurant_id": 1,
+  "type": "delivery",
   "address_id": 1,
-  "items": [
-    {
-      "dish_id": 1,
-      "quantity": 1
-    }
-  ],
-  "payment_method": "cash",
-  "delivery_mode": "delivery"
+  "payment_method": "cash"
 }
 
 ### 9.3 Create Order (Card Payment) - Créer commande avec paiement carte
 ### NOTE : Cette route retourne un client_secret pour Stripe
+### La commande utilise automatiquement le contenu du panier de l'utilisateur
 POST {{base_url}}/orders
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "restaurant_id": 1,
+  "type": "delivery",
   "address_id": 1,
-  "items": [
-    {
-      "dish_id": 1,
-      "quantity": 2,
-      "selected_options": [],
-      "special_instructions": "Sans oignons"
-    }
-  ],
   "payment_method": "card",
-  "delivery_mode": "delivery",
-  "scheduled_time": "2025-11-27 19:00:00",
-  "notes": "Livrer à la porte"
+  "scheduled_at": "2025-11-27 19:00:00",
+  "special_instructions": "Livrer à la porte"
 }
 
 ### 9.4 Create Order (Mobile Money) - Créer commande avec Mobile Money
@@ -291,18 +278,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "restaurant_id": 1,
+  "type": "delivery",
   "address_id": 1,
-  "items": [
-    {
-      "dish_id": 1,
-      "quantity": 1
-    }
-  ],
   "payment_method": "mobile_money",
   "mobile_money_provider": "MTN",
-  "mobile_money_number": "+229 12 34 56 78",
-  "delivery_mode": "delivery"
+  "mobile_money_number": "+229 12 34 56 78"
 }
 
 ### 9.5 Create Order (With Promo Code) - Créer commande avec code promo
@@ -311,17 +291,21 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "restaurant_id": 1,
+  "type": "delivery",
   "address_id": 1,
-  "items": [
-    {
-      "dish_id": 1,
-      "quantity": 2
-    }
-  ],
   "payment_method": "cash",
-  "promo_code": "PROMO10",
-  "delivery_mode": "delivery"
+  "promo_code": "PROMO10"
+}
+
+### 9.5b Create Order (Pickup) - Créer commande à emporter
+POST {{base_url}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "pickup",
+  "payment_method": "cash",
+  "special_instructions": "Préparer pour 19h"
 }
 
 ### 9.6 Get Order - Détails d'une commande

@@ -22,10 +22,13 @@ class CreateOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'address_id' => 'required|exists:addresses,id',
+            'address_id' => 'required_if:type,delivery|exists:addresses,id',
             'type' => 'required|in:delivery,pickup',
             'payment_method' => 'required|in:card,mobile_money,cash',
+            'mobile_money_provider' => 'required_if:payment_method,mobile_money|in:MTN,Moov',
+            'mobile_money_number' => 'required_if:payment_method,mobile_money|string',
             'promo_code' => 'nullable|string|exists:promo_codes,code',
+            'scheduled_at' => 'nullable|date',
             'special_instructions' => 'nullable|string|max:500',
         ];
     }
@@ -36,13 +39,17 @@ class CreateOrderRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'address_id.required' => 'L\'adresse de livraison est obligatoire.',
+            'address_id.required_if' => 'L\'adresse de livraison est obligatoire pour les commandes de type delivery.',
             'address_id.exists' => 'L\'adresse sélectionnée n\'existe pas.',
             'type.required' => 'Le type de commande est obligatoire.',
             'type.in' => 'Le type doit être : delivery ou pickup.',
             'payment_method.required' => 'La méthode de paiement est obligatoire.',
             'payment_method.in' => 'La méthode de paiement doit être : card, mobile_money ou cash.',
+            'mobile_money_provider.required_if' => 'Le fournisseur Mobile Money est obligatoire pour les paiements Mobile Money.',
+            'mobile_money_provider.in' => 'Le fournisseur doit être : MTN ou Moov.',
+            'mobile_money_number.required_if' => 'Le numéro Mobile Money est obligatoire pour les paiements Mobile Money.',
             'promo_code.exists' => 'Le code promo n\'existe pas ou n\'est plus valide.',
+            'scheduled_at.date' => 'La date de programmation doit être une date valide.',
         ];
     }
 

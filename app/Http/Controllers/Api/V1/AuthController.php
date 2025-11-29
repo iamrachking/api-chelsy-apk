@@ -187,7 +187,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/user",
+     *     path="/api/v1/me",
      *     summary="Récupérer les informations de l'utilisateur connecté",
      *     tags={"Authentification"},
      *     security={{"bearerAuth":{}}},

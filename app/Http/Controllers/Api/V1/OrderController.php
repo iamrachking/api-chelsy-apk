@@ -73,14 +73,14 @@ class OrderController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             required={"type", "payment_method"},
-     *             @OA\Property(property="type", type="string", enum={"delivery", "pickup"}, example="delivery"),
-     *             @OA\Property(property="address_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="type", type="string", enum={"delivery", "pickup"}, example="delivery", description="Type de commande : delivery (livraison) ou pickup (à emporter)"),
+     *             @OA\Property(property="address_id", type="integer", nullable=true, example=1, description="ID de l'adresse (requis si type=delivery)"),
      *             @OA\Property(property="payment_method", type="string", enum={"card", "cash", "mobile_money"}, example="card"),
-     *             @OA\Property(property="mobile_money_provider", type="string", nullable=true, enum={"MTN", "Moov"}),
-     *             @OA\Property(property="mobile_money_number", type="string", nullable=true, example="+229 12 34 56 78"),
+     *             @OA\Property(property="mobile_money_provider", type="string", nullable=true, enum={"MTN", "Moov"}, description="Fournisseur Mobile Money (requis si payment_method=mobile_money)"),
+     *             @OA\Property(property="mobile_money_number", type="string", nullable=true, example="+229 12 34 56 78", description="Numéro Mobile Money (requis si payment_method=mobile_money)"),
      *             @OA\Property(property="promo_code", type="string", nullable=true, example="PROMO10"),
-     *             @OA\Property(property="scheduled_at", type="string", format="datetime", nullable=true),
-     *             @OA\Property(property="special_instructions", type="string", nullable=true, example="Sonner 2 fois")
+     *             @OA\Property(property="scheduled_at", type="string", format="datetime", nullable=true, example="2025-11-27 19:00:00"),
+     *             @OA\Property(property="special_instructions", type="string", nullable=true, example="Sonner 2 fois", description="Instructions spéciales pour la commande")
      *         )
      *     ),
      *     @OA\Response(
