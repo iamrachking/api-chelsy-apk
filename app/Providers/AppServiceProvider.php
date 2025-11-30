@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
                 file_put_contents($path, $json);
             }
         }
+        //ici j'appel le service qui permet d'executer les migration et seeders sur le serveur vue que j'ai pas acces au terminal
         \App\Services\DatabaseBootstrapper::migrateAndSeed();
     }
 }
