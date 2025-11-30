@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,5 +31,9 @@ class AppServiceProvider extends ServiceProvider
                 file_put_contents($path, $json);
             }
         }
+         if (config('app.env') === 'production') {
+        // Force toutes les URLs générées par Laravel à être en HTTPS
+        URL::forceScheme('https');
+    }
     }
 }
