@@ -24,11 +24,13 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # === Étape 4 : Définir le répertoire de travail ===
 WORKDIR /var/www/html
 
-# === Étape 5 : Copier tous les fichiers du projet ===
+# === Étape 5 : Copier tout le projet AVANT l'installation ===
 COPY . .
 
-# === Étape 6 : Installer les dépendances PHP et Node ===
-RUN composer install --no-dev --optimize-autoloader \
+# === Étape 6 : Installer les dépendances PHP et Node correctement ===
+RUN composer install --no-dev --ignore-platform-reqs --optimize-autoloader \
+    && composer dump-autoload \
+    && php artisan package:discover --ansi || true \
     && npm ci \
     && npm prune --production
 
