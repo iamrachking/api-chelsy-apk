@@ -5,9 +5,9 @@ use App\Http\Controllers\Admin\Web\AdminAuthController;
 use App\Http\Controllers\Admin\Web\AdminProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/test-firebase-file', function() {
-    return file_exists(storage_path('app/firebase-credentials.json')) ? 'Fichier OK' : 'Fichier manquant';
-});
+// Route::get('/test-firebase-file', function() {
+//     return file_exists(storage_path('app/firebase-credentials.json')) ? 'Fichier OK' : 'Fichier manquant';
+// });
 
 // Route de base
 Route::get('/', function () {
