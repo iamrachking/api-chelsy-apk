@@ -30,7 +30,5 @@ class AppServiceProvider extends ServiceProvider
                 file_put_contents($path, $json);
             }
         }
-
-        \App\Services\DatabaseBootstrapper::migrateAndSeed();
     }
 }
