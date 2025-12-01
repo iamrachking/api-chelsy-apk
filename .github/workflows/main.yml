@@ -55,5 +55,5 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /home/u464255773/domains/cabinet-xaviertermeau.com/public_html/chelsy-api
+          server-dir: /home/u464255773/domains/cabinet-xaviertermeau.com/public_html/chelsy-api/
           local-dir: ./
