@@ -1,59 +1,23 @@
-name: 🚀 Deploy CHELSY API
-
-on:
-  push:
-    branches:
-      - main 
-
+on: push
+name: 🚀 Deploy website on push
 jobs:
-  deploy:
-    name: 🎉 Deploy Laravel + Vite
+  web-deploy:
+    name: 🎉 Deploy
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Récupérer le code
-      - name: 🚚 Checkout latest code
-        uses: actions/checkout@v4
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+    - name: 🚀 Install NPM dependencies
+      run: |
+        npm install
 
-      # 2️⃣ Installer PHP et Composer
-      - name: 🔧 Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.2
-          extensions: mbstring, bcmath, pdo_mysql, gd, zip
-          coverage: none
-
-      - name: 📦 Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader
-      
-      # 3️⃣ Installer Node et build Vite
-      - name: 🚀 Install NPM dependencies
-        run: npm install
-
-      - name: ⚡ Build assets with Vite
-        run: npm run build
-
-      # 4️⃣ Permissions Laravel
-      - name: 🔒 Set permissions
-        run: chmod -R 775 storage bootstrap/cache
-
-      # 5️⃣Optimisation Laravel
-      - name: ⚡ Optimize Laravel
-        run: |
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-
-      # 6️⃣ Exécuter migrations (optionnel)
-      - name: 🗄️ Run migrations
-        run: php artisan migrate --seed --force
-
-      # 7️⃣ Déploiement FTP sur Hostinger
-      - name: 📂 Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /home/u464255773/domains/cabinet-xaviertermeau.com/public_html/chelsy-api/
-          local-dir: ./
+    - name: ⚙️ Build assets with Vite
+      run: |
+        npm run build
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_SERVER}}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: ./api.cche-ch.org/
