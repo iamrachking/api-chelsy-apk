@@ -12,7 +12,7 @@
 
 ### Variables (Modifiez ces valeurs si nécessaire)
 @base_url = http://api-chelsy-apk.test/api/v1
-@token =10|QMFG6xjlTLXxb8UwbQEbuMt2lJt5gymVgBK8VSHC239d889d
+@token =
 
 ### ============================================
 ### ÉTAPE 1 : AUTHENTIFICATION
@@ -26,7 +26,7 @@ Content-Type: application/json
 {
   "firstname": "Test",
   "lastname": "User",
-  "email": "test.usero@example.com",
+  "email": "test.user@example.com",
   "password": "password123",
   "password_confirmation": "password123",
   "phone": "+229 12 34 56 78"
@@ -37,7 +37,7 @@ POST {{base_url}}/login
 Content-Type: application/json
 
 {
-  "email": "test.usero@example.com",
+  "email": "test.user@example.com",
   "password": "password123"
 }
 
@@ -176,11 +176,11 @@ Content-Type: application/json
 }
 
 ### 7.3 Get Address - Détails d'une adresse
-GET {{base_url}}/addresses/11
+GET {{base_url}}/addresses/1
 Authorization: Bearer {{token}}
 
 ### 7.4 Update Address - Modifier une adresse
-PUT {{base_url}}/addresses/9
+PUT {{base_url}}/addresses/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -194,7 +194,7 @@ Content-Type: application/json
 }
 
 ### 7.5 Delete Address - Supprimer une adresse
-DELETE {{base_url}}/addresses/9
+DELETE {{base_url}}/addresses/1
 Authorization: Bearer {{token}}
 
 ### ============================================
@@ -218,7 +218,7 @@ Content-Type: application/json
 }
 
 ### 8.3 Update Cart Item - Modifier un article du panier
-PUT {{base_url}}/cart/items/5
+PUT {{base_url}}/cart/items/1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -253,7 +253,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 11,
+  "address_id": 1,
   "payment_method": "cash"
 }
 
@@ -266,7 +266,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 11,
+  "address_id": 1,
   "payment_method": "card",
   "scheduled_at": "2025-11-27 19:00:00",
   "special_instructions": "Livrer à la porte"
@@ -279,7 +279,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 11,
+  "address_id": 1,
   "payment_method": "mobile_money",
   "mobile_money_provider": "MTN",
   "mobile_money_number": "+229 12 34 56 78"
@@ -292,7 +292,7 @@ Content-Type: application/json
 
 {
   "type": "delivery",
-  "address_id": 11,
+  "address_id": 1,
   "payment_method": "cash",
   "promo_code": "PROMO10"
 }
@@ -309,11 +309,11 @@ Content-Type: application/json
 }
 
 ### 9.6 Get Order - Détails d'une commande
-GET {{base_url}}/orders/5
+GET {{base_url}}/orders/1
 Authorization: Bearer {{token}}
 
 ### 9.7 Cancel Order - Annuler une commande
-POST {{base_url}}/orders/5/cancel
+POST {{base_url}}/orders/1/cancel
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -330,7 +330,7 @@ GET {{base_url}}/orders/5/invoice/download
 Authorization: Bearer {{token}}
 
 ### 9.10 Reorder - Recommander une commande
-POST {{base_url}}/orders/5/reorder
+POST {{base_url}}/orders/1/reorder
 Authorization: Bearer {{token}}
 
 ### ============================================
