@@ -18,7 +18,8 @@ class RestaurantResource extends JsonResource
         // Convertir le logo en URL complète si elle existe, sinon utiliser l'image par défaut
         $logoUrl = asset('images/default_restaurant.png');
         if ($this->logo && Storage::disk('public')->exists($this->logo)) {
-            $logoUrl = Storage::url($this->logo);
+            // Générer une URL complète pour l'application mobile
+            $logoUrl = url(Storage::url($this->logo));
         }
 
         // Traiter les images : vérifier si elles existent et convertir en URLs complètes
@@ -29,7 +30,8 @@ class RestaurantResource extends JsonResource
             foreach ($restaurantImages as $imagePath) {
                 // Vérifier si l'image existe réellement dans le storage
                 if ($imagePath && Storage::disk('public')->exists($imagePath)) {
-                    $images[] = Storage::url($imagePath);
+                    // Générer une URL complète pour l'application mobile
+                    $images[] = url(Storage::url($imagePath));
                 }
             }
         }

@@ -42,7 +42,8 @@ class OrderResource extends JsonResource
             'restaurant' => $this->whenLoaded('restaurant', function () {
                 $logoUrl = asset('images/default_restaurant.png');
                 if ($this->restaurant->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->restaurant->logo)) {
-                    $logoUrl = \Illuminate\Support\Facades\Storage::url($this->restaurant->logo);
+                    // Générer une URL complète pour l'application mobile
+                    $logoUrl = url(\Illuminate\Support\Facades\Storage::url($this->restaurant->logo));
                 }
                 
                 return [
@@ -91,7 +92,8 @@ class OrderResource extends JsonResource
                         if (is_array($dishImages) && !empty($dishImages)) {
                             foreach ($dishImages as $imagePath) {
                                 if ($imagePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($imagePath)) {
-                                    $dishImage = \Illuminate\Support\Facades\Storage::url($imagePath);
+                                    // Générer une URL complète pour l'application mobile
+                                    $dishImage = url(\Illuminate\Support\Facades\Storage::url($imagePath));
                                     break;
                                 }
                             }

@@ -23,7 +23,8 @@ class ReviewResource extends JsonResource
             foreach ($reviewImages as $imagePath) {
                 // Vérifier si l'image existe réellement dans le storage
                 if ($imagePath && Storage::disk('public')->exists($imagePath)) {
-                    $images[] = Storage::url($imagePath);
+                    // Générer une URL complète pour l'application mobile
+                    $images[] = url(Storage::url($imagePath));
                 }
             }
         }

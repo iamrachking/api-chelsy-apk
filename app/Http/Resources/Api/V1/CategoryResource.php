@@ -18,7 +18,8 @@ class CategoryResource extends JsonResource
         // Convertir l'image en URL complète si elle existe, sinon utiliser l'image par défaut
         $imageUrl = asset('images/default_category.png');
         if ($this->image && Storage::disk('public')->exists($this->image)) {
-            $imageUrl = Storage::url($this->image);
+            // Générer une URL complète pour l'application mobile
+            $imageUrl = url(Storage::url($this->image));
         }
 
         return [
