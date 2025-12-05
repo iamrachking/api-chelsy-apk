@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\ComplaintController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\FcmTokenController;
 use App\Http\Controllers\Api\V1\DeliveryTrackingController;
+use App\Http\Controllers\Api\V1\BannerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -52,6 +53,9 @@ Route::prefix('v1')->group(function () {
 
     // FAQ
     Route::get('/faqs', [FAQController::class, 'index']);
+
+    // Bannières
+    Route::get('/banners', [BannerController::class, 'index']);
 
     // Avis publics
     Route::get('/dishes/{dishId}/reviews', [ReviewController::class, 'dishReviews']);

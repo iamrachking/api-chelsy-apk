@@ -98,6 +98,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/faqs/{id}', [AdminDashboardController::class, 'updateFAQ'])->name('faqs.update');
         Route::delete('/faqs/{id}', [AdminDashboardController::class, 'deleteFAQ'])->name('faqs.delete');
         
+        // Bannières
+        Route::get('/banners', [AdminDashboardController::class, 'banners'])->name('banners');
+        Route::get('/banners/create', [AdminDashboardController::class, 'createBanner'])->name('banners.create');
+        Route::post('/banners', [AdminDashboardController::class, 'storeBanner'])->name('banners.store');
+        Route::get('/banners/{id}/edit', [AdminDashboardController::class, 'editBanner'])->name('banners.edit');
+        Route::put('/banners/{id}', [AdminDashboardController::class, 'updateBanner'])->name('banners.update');
+        Route::delete('/banners/{id}', [AdminDashboardController::class, 'deleteBanner'])->name('banners.delete');
+        
         // Utilisateurs
         Route::get('/users', [AdminDashboardController::class, 'users'])->name('users');
         Route::get('/users/create-admin', [AdminDashboardController::class, 'createAdmin'])->name('users.create-admin');

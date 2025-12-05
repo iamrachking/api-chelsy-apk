@@ -69,6 +69,10 @@ use Illuminate\Support\Facades\Storage;
                 <i class="fas fa-ticket-alt w-5 mr-3"></i>
                 Codes Promo
             </a>
+            <a href="{{ route('admin.banners') }}" class="flex items-center px-6 py-3 text-white hover:bg-blue-700 transition-colors {{ request()->routeIs('admin.banners*') ? 'bg-blue-700 border-r-4 border-yellow-400' : '' }}">
+                <i class="fas fa-image w-5 mr-3"></i>
+                Bannières
+            </a>
             <a href="{{ route('admin.faqs') }}" class="flex items-center px-6 py-3 text-white hover:bg-blue-700 transition-colors {{ request()->routeIs('admin.faqs*') ? 'bg-blue-700 border-r-4 border-yellow-400' : '' }}">
                 <i class="fas fa-question-circle w-5 mr-3"></i>
                 FAQ

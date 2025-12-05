@@ -12,6 +12,7 @@ use App\Models\Restaurant;
 use App\Models\PromoCode;
 use App\Models\FAQ;
 use App\Models\Complaint;
+use App\Models\Banner;
 use App\Services\ImageService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
@@ -1252,5 +1253,89 @@ class AdminDashboardController extends Controller
         }
 
         return redirect()->route('admin.dishes')->with('success', $message);
+    }
+
+    // ==================== BANNIÈRES ====================
+
+    public function banners()
+    {
+        $banners = Banner::orderBy('order')->orderBy('created_at', 'desc')->get();
+        return view('admin.banners.index', compact('banners'));
+    }
+
+    public function createBanner()
+    {
+        return view('admin.banners.create');
+    }
+
+    public function storeBanner(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'link' => 'nullable|string|max:500',
+            'order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        // Upload de l'image
+        if ($request->hasFile('image')) {
+            $validated['image'] = ImageService::upload($request->file('image'), 'banners');
+        }
+
+        $validated['is_active'] = $request->has('is_active');
+        $validated['order'] = $request->input('order', 0);
+
+        Banner::create($validated);
+
+        return redirect()->route('admin.banners')->with('success', 'Bannière créée avec succès');
+    }
+
+    public function editBanner($id)
+    {
+        $banner = Banner::findOrFail($id);
+        return view('admin.banners.edit', compact('banner'));
+    }
+
+    public function updateBanner(Request $request, $id)
+    {
+        $banner = Banner::findOrFail($id);
+        
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'link' => 'nullable|string|max:500',
+            'order' => 'nullable|integer|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        // Upload de la nouvelle image si présente
+        if ($request->hasFile('image')) {
+            // Supprimer l'ancienne image
+            if ($banner->image) {
+                ImageService::delete($banner->image);
+            }
+            $validated['image'] = ImageService::upload($request->file('image'), 'banners');
+        }
+
+        $validated['is_active'] = $request->has('is_active');
+        $validated['order'] = $request->input('order', $banner->order);
+
+        $banner->update($validated);
+
+        return redirect()->route('admin.banners')->with('success', 'Bannière mise à jour avec succès');
+    }
+
+    public function deleteBanner($id)
+    {
+        $banner = Banner::findOrFail($id);
+        
+        // Supprimer l'image associée
+        if ($banner->image) {
+            ImageService::delete($banner->image);
+        }
+        
+        $banner->delete();
+        return redirect()->route('admin.banners')->with('success', 'Bannière supprimée avec succès');
     }
 }
