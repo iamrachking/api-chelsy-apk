@@ -780,6 +780,44 @@
                 }
             }
         },
+        "/api/v1/banners": {
+            "get": {
+                "tags": [
+                    "Bannières"
+                ],
+                "summary": "Liste des bannières actives",
+                "operationId": "0c3da1f5a44ca6f7b2522667ec88f455",
+                "responses": {
+                    "200": {
+                        "description": "Liste des bannières",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "banners": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/cart": {
             "get": {
                 "tags": [
@@ -3219,6 +3257,10 @@
         {
             "name": "Authentification",
             "description": "Endpoints pour l'authentification des utilisateurs"
+        },
+        {
+            "name": "Bannières",
+            "description": "Endpoints pour les bannières promotionnelles"
         },
         {
             "name": "Panier",
