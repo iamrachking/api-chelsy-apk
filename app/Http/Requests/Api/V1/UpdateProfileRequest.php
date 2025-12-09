@@ -30,7 +30,7 @@ class UpdateProfileRequest extends FormRequest
             'phone' => 'nullable|string|max:20',
             'birth_date' => 'nullable|date',
             'gender' => 'nullable|in:male,female,other',
-            'avatar' => 'nullable|string',
+            'avatar' => 'nullable|image|max:5120',
         ];
     }
 
