@@ -68,18 +68,28 @@ class UserController extends Controller
      * )
      */
     public function updateProfile(UpdateProfileRequest $request)
-    {
-        $user = $request->user();
-        $user->update($request->validated());
+{
+    $user = $request->user();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Profil mis à jour avec succès',
-            'data' => [
-                'user' => new UserResource($user->fresh()),
-            ]
-        ]);
+    // Si un fichier avatar est uploadé
+    if ($request->hasFile('avatar')) {
+        $file = $request->file('avatar');
+        $path = $file->store('avatars', 'public'); // Stocke dans storage/app/public/avatars
+        $user->avatar = $path;
     }
+
+    // Mettre à jour les autres champs
+    $user->update($request->except('avatar'));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Profil mis à jour avec succès',
+        'data' => [
+            'user' => new UserResource($user->fresh()), // renvoie l'URL complète
+        ]
+    ]);
+}
+
 
     /**
      * @OA\Post(

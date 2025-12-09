@@ -23,7 +23,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'birth_date' => $this->birth_date?->format('Y-m-d'),
             'gender' => $this->gender,
-            'avatar' => $this->avatar,
+            'avatar' => $this->avatar ? asset("storage/{$this->avatar}") : null,
             'email_verified' => $this->email_verified,
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
