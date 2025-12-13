@@ -16,16 +16,11 @@ class CartItemResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'cart_id' => $this->cart_id,
-            'dish_id' => $this->dish_id,
-            'quantity' => (int) $this->quantity,
-            'unit_price' => (float) $this->unit_price,
-            'total_price' => (float) ($this->unit_price * $this->quantity),
-            'selected_options' => $this->selected_options ?? [],
-            'special_instructions' => $this->special_instructions,
-            'dish' => $this->whenLoaded('dish', function () {
-                return new DishResource($this->dish);
-            }),
+            'user_id' => $this->user_id,
+            'session_id' => $this->session_id,
+            'items' => CartItemResource::collection($this->items), // Enlevé whenLoaded
+            'subtotal' => (float) $this->subtotal,
+            'total_items' => (int) $this->total_items,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];

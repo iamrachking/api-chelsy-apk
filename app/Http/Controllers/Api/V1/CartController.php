@@ -52,7 +52,16 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'cart' => new CartItemResource($cart),
+                'cart' => [
+                    'id' => $cart->id,
+                    'user_id' => $cart->user_id,
+                    'session_id' => $cart->session_id,
+                    'items' => CartItemResource::collection($cart->items),
+                    'subtotal' => (float) $cart->subtotal,
+                    'total_items' => (int) $cart->total_items,
+                    'created_at' => $cart->created_at->toIso8601String(),
+                    'updated_at' => $cart->updated_at->toIso8601String(),
+                ]
             ]
         ]);
     }
