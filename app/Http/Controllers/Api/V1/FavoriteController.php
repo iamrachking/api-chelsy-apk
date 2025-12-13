@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\FavoriteResource;
 use App\Models\Favorite;
 use Illuminate\Http\Request;
 
@@ -40,7 +41,7 @@ class FavoriteController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'favorites' => $favorites,
+                'favorites' => FavoriteResource::collection($favorites),
             ]
         ]);
     }
@@ -84,7 +85,7 @@ class FavoriteController extends Controller
             'success' => true,
             'message' => 'Ajouté aux favoris',
             'data' => [
-                'favorite' => $favorite->load('dish'),
+                'favorite' => new FavoriteResource($favorite->load('dish')),
             ]
         ], 201);
     }
