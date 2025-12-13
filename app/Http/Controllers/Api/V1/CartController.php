@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AddToCartRequest;
+use App\Http\Resources\Api\V1\CartResource;
+use App\Http\Resources\Api\V1\CartItemResource;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Dish;
@@ -50,9 +52,7 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'cart' => $cart,
-                'subtotal' => $cart->subtotal,
-                'total_items' => $cart->total_items,
+                'cart' => new CartItemResource($cart),
             ]
         ]);
     }
@@ -90,7 +90,6 @@ class CartController extends Controller
      */
     public function addItem(AddToCartRequest $request)
     {
-
         $dish = Dish::findOrFail($request->dish_id);
 
         if (!$dish->is_available) {
@@ -135,7 +134,7 @@ class CartController extends Controller
             'success' => true,
             'message' => 'Plat ajouté au panier',
             'data' => [
-                'cart_item' => $cartItem->load('dish'),
+                'cart_item' => new CartItemResource($cartItem->load('dish')),
             ]
         ], 201);
     }
@@ -198,7 +197,7 @@ class CartController extends Controller
             'success' => true,
             'message' => 'Article mis à jour',
             'data' => [
-                'cart_item' => $cartItem->load('dish'),
+                'cart_item' => new CartItemResource($cartItem->load('dish')),
             ]
         ]);
     }
