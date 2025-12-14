@@ -34,76 +34,6 @@ class PaymentController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/payments/stripe/create",
-     *     summary="Créer un paiement Stripe (Carte bancaire)",
-     *     tags={"Paiements"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"order_id"},
-     *             @OA\Property(property="order_id", type="integer", example=1)
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Paiement créé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     )
-     * )
-     */
-    public function createStripePayment(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:orders,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $order = $request->user()->orders()->findOrFail($request->order_id);
-
-        if ($order->payment->method !== 'card') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cette commande n\'utilise pas le paiement par carte',
-            ], 422);
-        }
-
-        $result = $this->paymentService->createStripePayment($order);
-
-        if ($result['success']) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Paiement Stripe créé',
-                'data' => [
-                    'payment_id' => $result['payment_id'],
-                    'client_secret' => $result['client_secret'],
-                    'payment_intent_id' => $result['payment_intent_id'],
-                    'publishable_key' => $result['publishable_key'],
-                    'amount' => $result['amount'],
-                    'currency' => $result['currency'],
-                ]
-            ], 200);
-        }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur lors de la création du paiement',
-            'error' => $result['error'] ?? null,
-        ], 500);
-    }
-
-    /**
-     * @OA\Post(
      *     path="/api/v1/payments/stripe/confirm",
      *     summary="Confirmer un paiement Stripe",
      *     tags={"Paiements"},
@@ -129,7 +59,7 @@ class PaymentController extends Controller
     public function confirmStripePayment(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|exists:orders,id',
+            'order_id' => 'required|integer|exists:orders,id',
             'payment_intent_id' => 'required|string',
         ]);
 
@@ -141,42 +71,63 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $order = $request->user()->orders()->findOrFail($request->order_id);
+        try {
+            $orderId = (int) $request->order_id;
+            $paymentIntentId = $request->payment_intent_id;
 
-        if ($order->payment->method !== 'card') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cette commande n\'utilise pas le paiement par carte',
-            ], 422);
-        }
+            // ✅ Vérifier que la commande appartient à l'utilisateur
+            $order = $request->user()->orders()->findOrFail($orderId);
 
-        $result = $this->paymentService->confirmStripePayment($request->payment_intent_id, $order);
+            if ($order->payment->method !== 'card') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cette commande n\'utilise pas le paiement par carte',
+                ], 422);
+            }
 
-        if ($result['success']) {
-            try {
-                $this->notificationService->sendPaymentConfirmation($request->user(), $order);
-            } catch (\Exception $e) {
-                Log::error('Erreur notification paiement', [
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage(),
+            // ✅ CORRECTION: Les arguments dans le BON ORDRE
+            // confirmStripePayment(int $orderId, string $paymentIntentId)
+            $result = $this->paymentService->confirmStripePayment($orderId, $paymentIntentId);
+
+            if ($result['success']) {
+                try {
+                    $this->notificationService->sendPaymentConfirmation($request->user(), $order);
+                } catch (\Exception $e) {
+                    Log::error('Erreur notification paiement', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $result['message'],
+                    'data' => [
+                        'order_id' => $order->id,
+                        'status' => 'confirmed',
+                    ]
                 ]);
             }
 
             return response()->json([
-                'success' => true,
-                'message' => $result['message'],
-                'data' => [
-                    'order_id' => $order->id,
-                    'status' => 'confirmed',
-                ]
-            ]);
-        }
+                'success' => false,
+                'message' => $result['message'] ?? 'Erreur lors de la confirmation du paiement',
+                'error' => $result['error'] ?? null,
+            ], 422);
 
-        return response()->json([
-            'success' => false,
-            'message' => $result['message'] ?? 'Erreur lors de la confirmation du paiement',
-            'error' => $result['error'] ?? null,
-        ], 422);
+        } catch (\Exception $e) {
+            Log::error('Erreur confirmation Stripe', [
+                'order_id' => $request->order_id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la confirmation du paiement',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ======================= MOBILE MONEY PAYMENT (FedaPay) =======================
@@ -242,7 +193,6 @@ class PaymentController extends Controller
                 'success' => true,
                 'message' => $result['message'],
                 'data' => [
-                    'payment_id' => $result['payment_id'],
                     'transaction_id' => $result['transaction_id'],
                     'status' => $result['status'],
                     'amount' => $result['amount'],

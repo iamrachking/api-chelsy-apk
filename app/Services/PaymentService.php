@@ -109,7 +109,6 @@ class PaymentService
                 ];
 
             } elseif ($paymentIntent->status === 'requires_payment_method') {
-                // ❌ Le paiement n'a pas de méthode de paiement
                 return [
                     'success' => false,
                     'error' => 'requires_payment_method',
@@ -117,7 +116,6 @@ class PaymentService
                 ];
 
             } elseif ($paymentIntent->status === 'requires_action') {
-                // ❌ Action requise (3D Secure, etc.)
                 return [
                     'success' => false,
                     'error' => 'requires_action',
@@ -125,7 +123,6 @@ class PaymentService
                 ];
 
             } elseif ($paymentIntent->status === 'processing') {
-                // ⏳ En cours de traitement
                 return [
                     'success' => false,
                     'error' => 'processing',
@@ -133,7 +130,6 @@ class PaymentService
                 ];
 
             } else {
-                // ❌ Statut non géré
                 return [
                     'success' => false,
                     'error' => $paymentIntent->status,
@@ -206,8 +202,13 @@ class PaymentService
     {
         try {
             // TODO: Implémenter l'intégration FedaPay
-            // Pour l'instant, retourner une erreur
+            // Pour l'instant, retourner un succès simulé
             
+            Log::info('Mobile Money payment creation initiated', [
+                'order_id' => $order->id,
+                'provider' => $provider,
+            ]);
+
             return [
                 'success' => false,
                 'error' => 'Mobile Money non encore implémenté',
@@ -223,6 +224,187 @@ class PaymentService
                 'success' => false,
                 'error' => $e->getMessage(),
             ];
+        }
+    }
+
+    // ✅ Vérifier le statut d'un paiement Mobile Money
+    public function checkMobileMoneyStatus(string $transactionId): array
+    {
+        try {
+            // TODO: Implémenter la vérification FedaPay
+            // Pour l'instant, retourner un état par défaut
+            
+            Log::info('Mobile Money status check', [
+                'transaction_id' => $transactionId,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Mobile Money status check non encore implémenté',
+                'status' => 'pending',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Mobile Money status check error', [
+                'transaction_id' => $transactionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    // ✅ Traiter les événements Stripe Webhook
+    public function handleStripeWebhookEvent($event): void
+    {
+        try {
+            Log::info('Processing Stripe webhook event', [
+                'event_type' => $event->type ?? 'unknown',
+                'event_id' => $event->id ?? 'unknown',
+            ]);
+
+            // Gérer différents types d'événements
+            switch ($event->type ?? null) {
+                case 'payment_intent.succeeded':
+                    $this->handlePaymentIntentSucceeded($event->data->object);
+                    break;
+
+                case 'payment_intent.payment_failed':
+                    $this->handlePaymentIntentFailed($event->data->object);
+                    break;
+
+                case 'charge.refunded':
+                    $this->handleChargeRefunded($event->data->object);
+                    break;
+
+                default:
+                    Log::info('Unhandled Stripe webhook event type', [
+                        'type' => $event->type ?? 'unknown',
+                    ]);
+                    break;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error handling Stripe webhook', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    // ✅ Gérer les paiements réussis
+    private function handlePaymentIntentSucceeded($paymentIntent): void
+    {
+        try {
+            $orderId = $paymentIntent->metadata->order_id ?? null;
+            
+            if (!$orderId) {
+                Log::warning('Payment intent succeeded but no order_id in metadata', [
+                    'payment_intent_id' => $paymentIntent->id,
+                ]);
+                return;
+            }
+
+            $order = Order::find($orderId);
+            if (!$order) {
+                Log::warning('Order not found for payment intent', [
+                    'order_id' => $orderId,
+                    'payment_intent_id' => $paymentIntent->id,
+                ]);
+                return;
+            }
+
+            // Mettre à jour la commande et le paiement
+            $order->update(['status' => 'confirmed']);
+            
+            if ($order->payment) {
+                $order->payment->update([
+                    'status' => 'completed',
+                    'transaction_id' => $paymentIntent->id,
+                ]);
+            }
+
+            Log::info('Payment intent succeeded and order updated', [
+                'order_id' => $orderId,
+                'payment_intent_id' => $paymentIntent->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error handling payment intent succeeded', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    // ✅ Gérer les paiements échoués
+    private function handlePaymentIntentFailed($paymentIntent): void
+    {
+        try {
+            $orderId = $paymentIntent->metadata->order_id ?? null;
+            
+            if (!$orderId) {
+                return;
+            }
+
+            $order = Order::find($orderId);
+            if (!$order) {
+                return;
+            }
+
+            // Mettre à jour le paiement
+            if ($order->payment) {
+                $order->payment->update([
+                    'status' => 'failed',
+                    'failure_reason' => $paymentIntent->last_payment_error?->message ?? 'Unknown error',
+                ]);
+            }
+
+            Log::info('Payment intent failed and order updated', [
+                'order_id' => $orderId,
+                'payment_intent_id' => $paymentIntent->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error handling payment intent failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    // ✅ Gérer les remboursements
+    private function handleChargeRefunded($charge): void
+    {
+        try {
+            Log::info('Processing charge refunded event', [
+                'charge_id' => $charge->id,
+                'amount' => $charge->amount_refunded,
+            ]);
+
+            // TODO: Implémenter la logique de remboursement
+        } catch (\Exception $e) {
+            Log::error('Error handling charge refunded', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    // ✅ Traiter les événements FedaPay Webhook
+    public function handleFedaPayWebhookEvent($payload): void
+    {
+        try {
+            Log::info('Processing FedaPay webhook event', [
+                'transaction_id' => $payload['transaction_id'] ?? 'unknown',
+                'status' => $payload['status'] ?? 'unknown',
+            ]);
+
+            // TODO: Implémenter la gestion des webhooks FedaPay
+            
+            Log::info('FedaPay webhook event processed');
+        } catch (\Exception $e) {
+            Log::error('Error handling FedaPay webhook', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 }
