@@ -9,14 +9,6 @@ use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Stripe\Exception\ApiErrorException;
 
-// ✅ Vérifier si FedaPay est installé avant d'importer
-if (class_exists('\FedaPay\FedaPay')) {
-    use \FedaPay\FedaPay;
-    use \FedaPay\Transaction;
-    $FEDAPAY_AVAILABLE = true;
-} else {
-    $FEDAPAY_AVAILABLE = false;
-}
 
 class PaymentService
 {
@@ -26,15 +18,6 @@ class PaymentService
         $stripeSecret = config('services.stripe.secret');
         if ($stripeSecret) {
             Stripe::setApiKey($stripeSecret);
-        }
-
-        // Configuration FedaPay (si disponible)
-        if ($FEDAPAY_AVAILABLE) {
-            $fedapaySecret = config('services.fedapay.secret_key');
-            if ($fedapaySecret) {
-                FedaPay::setApiKey($fedapaySecret);
-                FedaPay::setEnvironment(config('services.fedapay.environment', 'sandbox'));
-            }
         }
     }
 
@@ -237,8 +220,8 @@ class PaymentService
                 throw new \Exception('Aucun paiement associé à cette commande');
             }
 
-            // ✅ VÉRIFIER SI FEDAPAY EST DISPONIBLE
-            if (!class_exists('\FedaPay\FedaPay')) {
+            // ✅ VÉRIFIER SI FEDAPAY EXISTE AVANT DE L'UTILISER
+            if (!$this->isFedaPayAvailable()) {
                 Log::warning('FedaPay non installé - simulation du paiement Mobile Money');
                 return $this->simulateMobileMoneyPayment($payment, $order, $provider, $phoneNumber);
             }
@@ -249,11 +232,15 @@ class PaymentService
                 return $this->simulateMobileMoneyPayment($payment, $order, $provider, $phoneNumber);
             }
 
+            // Importer FedaPay dynamiquement
+            $this->initializeFedaPay();
+
             // Normaliser le numéro de téléphone
             $phoneNumber = $this->normalizePhoneNumber($phoneNumber);
 
             // Créer une transaction FedaPay
-            $transaction = Transaction::create([
+            $transactionClass = '\FedaPay\Transaction';
+            $transaction = $transactionClass::create([
                 'description' => "Commande {$order->order_number}",
                 'amount' => (float)$order->total,
                 'currency' => [
@@ -321,8 +308,8 @@ class PaymentService
     public function checkMobileMoneyStatus(string $transactionId): array
     {
         try {
-            // ✅ VÉRIFIER SI FEDAPAY EST DISPONIBLE
-            if (!class_exists('\FedaPay\FedaPay')) {
+            // ✅ VÉRIFIER SI FEDAPAY EXISTE
+            if (!$this->isFedaPayAvailable()) {
                 Log::warning('FedaPay non installé - vérification simulée');
                 return ['success' => true, 'status' => 'approved'];
             }
@@ -332,7 +319,10 @@ class PaymentService
                 return ['success' => true, 'status' => 'approved'];
             }
 
-            $transaction = Transaction::retrieve($transactionId);
+            $this->initializeFedaPay();
+
+            $transactionClass = '\FedaPay\Transaction';
+            $transaction = $transactionClass::retrieve($transactionId);
             $status = $this->mapFedaPayStatus($transaction->status);
 
             Log::info('Statut FedaPay vérifié', [
@@ -356,6 +346,24 @@ class PaymentService
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    // ======================== HELPERS ========================
+
+    private function isFedaPayAvailable(): bool
+    {
+        return class_exists('\FedaPay\FedaPay');
+    }
+
+    private function initializeFedaPay(): void
+    {
+        if (!$this->isFedaPayAvailable()) {
+            return;
+        }
+
+        $fedaPayClass = '\FedaPay\FedaPay';
+        $fedaPayClass::setApiKey(config('services.fedapay.secret_key'));
+        $fedaPayClass::setEnvironment(config('services.fedapay.environment', 'sandbox'));
     }
 
     private function simulateMobileMoneyPayment($payment, $order, $provider, $phoneNumber)
