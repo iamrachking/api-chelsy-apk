@@ -241,6 +241,7 @@ class OrderController extends Controller
             ]);
 
             // Traiter le paiement selon la méthode
+// Traiter le paiement selon la méthode
 $paymentService = new PaymentService();
 $paymentResult = null;
 
@@ -257,11 +258,11 @@ if ($request->payment_method === 'card') {
         ], 500);
     }
 } elseif ($request->payment_method === 'mobile_money') {
-    // Paiement Mobile Money via FedaPay
+    // Paiement Mobile Money (simulé)
     $paymentResult = $paymentService->processMobileMoneyPayment(
         $order,
-        $request->mobile_money_provider,
-        $request->mobile_money_number
+        $request->mobile_money_provider ?? 'MTN',
+        $request->mobile_money_number ?? ''
     );
     
     if (!$paymentResult['success']) {
@@ -274,7 +275,15 @@ if ($request->payment_method === 'card') {
     }
 } else {
     // Paiement en espèces
-    $paymentService->processCashPayment($order);
+    $paymentResult = $paymentService->processCashPayment($order);
+    
+    if (!$paymentResult['success']) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors du traitement du paiement en espèces',
+        ], 500);
+    }
 }
 
             // Enregistrer l'utilisation du code promo
