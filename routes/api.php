@@ -60,8 +60,9 @@ Route::prefix('v1')->group(function () {
     // Avis publics
     Route::get('/dishes/{dishId}/reviews', [ReviewController::class, 'dishReviews']);
 
-    // Webhook Stripe (sans authentification)
-    Route::post('/webhooks/stripe', [PaymentController::class, 'stripeWebhook']);
+    // Webhooks (sans authentification)
+    Route::post('/webhooks/stripe', [PaymentController::class, 'stripeWebhook'])->name('webhooks.stripe');
+    Route::post('/webhooks/fedapay', [PaymentController::class, 'fedaPayWebhook'])->name('webhooks.fedapay');
 });
 
 // Routes protégées (nécessitent une authentification)
@@ -93,6 +94,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
     Route::get('/orders/{id}/invoice', [OrderController::class, 'getInvoice']);
     Route::get('/orders/{id}/invoice/download', [OrderController::class, 'downloadInvoice']);
     Route::post('/orders/{id}/reorder', [OrderController::class, 'reorder']);
+
+    // Paiements
+    Route::post('/payments/confirm-stripe', [PaymentController::class, 'confirmStripePayment']);
+    Route::post('/payments/mobile-money/status', [PaymentController::class, 'checkMobileMoneyStatus']);
 
     // Avis
     Route::post('/reviews', [ReviewController::class, 'store']);

@@ -241,28 +241,41 @@ class OrderController extends Controller
             ]);
 
             // Traiter le paiement selon la méthode
-            $paymentService = new PaymentService();
-            $paymentResult = null;
-            
-            if ($request->payment_method === 'card') {
-                $paymentResult = $paymentService->createStripePayment($order);
-                if (!$paymentResult['success']) {
-                    DB::rollBack();
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Erreur lors de la création du paiement',
-                        'error' => $paymentResult['error'] ?? 'Erreur inconnue',
-                    ], 500);
-                }
-            } elseif ($request->payment_method === 'mobile_money') {
-                $paymentResult = $paymentService->processMobileMoneyPayment(
-                    $order,
-                    $request->mobile_money_provider,
-                    $request->mobile_money_number
-                );
-            } else {
-                $paymentService->processCashPayment($order);
-            }
+$paymentService = new PaymentService();
+$paymentResult = null;
+
+if ($request->payment_method === 'card') {
+    // Paiement par carte via Stripe
+    $paymentResult = $paymentService->createStripePayment($order);
+    
+    if (!$paymentResult['success']) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la création du paiement',
+            'error' => $paymentResult['error'] ?? 'Erreur inconnue',
+        ], 500);
+    }
+} elseif ($request->payment_method === 'mobile_money') {
+    // Paiement Mobile Money via FedaPay
+    $paymentResult = $paymentService->processMobileMoneyPayment(
+        $order,
+        $request->mobile_money_provider,
+        $request->mobile_money_number
+    );
+    
+    if (!$paymentResult['success']) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de l\'initialisation du paiement Mobile Money',
+            'error' => $paymentResult['error'] ?? 'Erreur inconnue',
+        ], 500);
+    }
+} else {
+    // Paiement en espèces
+    $paymentService->processCashPayment($order);
+}
 
             // Enregistrer l'utilisation du code promo
             // Re-vérifier que le code est toujours valide avant d'enregistrer l'utilisation
@@ -309,14 +322,24 @@ class OrderController extends Controller
             $responseData = [
                 'order' => new OrderResource($order->load(['restaurant', 'address', 'items.dish', 'payment', 'promoCode'])),
             ];
-
-            // Ajouter les informations de paiement Stripe si nécessaire
+            // AJOUTER : Informations de paiement Stripe
             if ($request->payment_method === 'card' && $paymentResult && isset($paymentResult['client_secret'])) {
                 $responseData['payment'] = [
                     'client_secret' => $paymentResult['client_secret'],
                     'payment_intent_id' => $paymentResult['payment_intent_id'],
+                    'publishable_key' => $paymentResult['publishable_key'],
                 ];
             }
+
+            // AJOUTER : Informations de paiement Mobile Money
+            if ($request->payment_method === 'mobile_money' && $paymentResult && isset($paymentResult['payment_url'])) {
+                $responseData['payment'] = [
+                    'transaction_id' => $paymentResult['transaction_id'],
+                    'payment_url' => $paymentResult['payment_url'],
+                    'token' => $paymentResult['token'],
+                ];
+            }
+
 
             return response()->json([
                 'success' => true,

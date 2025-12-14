@@ -25,8 +25,12 @@ class CreateOrderRequest extends FormRequest
             'address_id' => 'required_if:type,delivery|exists:addresses,id',
             'type' => 'required|in:delivery,pickup',
             'payment_method' => 'required|in:card,mobile_money,cash',
-            'mobile_money_provider' => 'required_if:payment_method,mobile_money|in:MTN,Moov',
-            'mobile_money_number' => 'required_if:payment_method,mobile_money|string',
+            'mobile_money_provider' => 'required_if:payment_method,mobile_money|in:MTN,Moov,mtn,moov',
+            'mobile_money_number' => [
+                'required_if:payment_method,mobile_money',
+                'string',
+                'regex:/^(\+229)?[0-9]{8,10}$/', // Format béninois
+            ],
             'promo_code' => 'nullable|string|exists:promo_codes,code',
             'scheduled_at' => 'nullable|date',
             'special_instructions' => 'nullable|string|max:500',
@@ -48,6 +52,7 @@ class CreateOrderRequest extends FormRequest
             'mobile_money_provider.required_if' => 'Le fournisseur Mobile Money est obligatoire pour les paiements Mobile Money.',
             'mobile_money_provider.in' => 'Le fournisseur doit être : MTN ou Moov.',
             'mobile_money_number.required_if' => 'Le numéro Mobile Money est obligatoire pour les paiements Mobile Money.',
+            'mobile_money_number.regex' => 'Format de numéro invalide. Utilisez +229XXXXXXXX ou XXXXXXXX.',
             'promo_code.exists' => 'Le code promo n\'existe pas ou n\'est plus valide.',
             'scheduled_at.date' => 'La date de programmation doit être une date valide.',
         ];
