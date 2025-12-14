@@ -20,22 +20,22 @@ class CreateOrderRequest extends FormRequest
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
-    {
-        return [
-            'address_id' => 'required_if:type,delivery|exists:addresses,id',
-            'type' => 'required|in:delivery,pickup',
-            'payment_method' => 'required|in:card,mobile_money,cash',
-            'mobile_money_provider' => 'required_if:payment_method,mobile_money|in:MTN,Moov,mtn,moov',
-            'mobile_money_number' => [
-                'required_if:payment_method,mobile_money',
-                'string',
-                'regex:/^(\+229)?[0-9]{8,10}$/', // Format béninois
-            ],
-            'promo_code' => 'nullable|string|exists:promo_codes,code',
-            'scheduled_at' => 'nullable|date',
-            'special_instructions' => 'nullable|string|max:500',
-        ];
-    }
+{
+    return [
+        'address_id' => 'required_if:type,delivery|nullable|exists:addresses,id',
+        'type' => 'required|in:delivery,pickup',
+        'payment_method' => 'required|in:card,mobile_money,cash',
+        'mobile_money_provider' => 'nullable|in:MTN,Moov,mtn,moov', // CHANGÉ: nullable au lieu de required_if
+        'mobile_money_number' => [
+            'nullable', // CHANGÉ: nullable au lieu de required_if
+            'string',
+            'regex:/^(\+229)?[0-9]{8,10}$/',
+        ],
+        'promo_code' => 'nullable|string|exists:promo_codes,code',
+        'scheduled_at' => 'nullable|date',
+        'special_instructions' => 'nullable|string|max:500',
+    ];
+}
 
     /**
      * Get custom messages for validator errors.
