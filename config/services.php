@@ -35,9 +35,15 @@ return [
         ],
     ],
 
+    // 'stripe' => [
+    //     'key' => env('STRIPE_KEY'),
+    //     'secret' => env('STRIPE_SECRET'),
+    //     'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    // ],
     'stripe' => [
-        'key' => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
+        'public' => env('STRIPE_PUBLIC_KEY'),
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'currency' => env('STRIPE_CURRENCY', 'xof'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
