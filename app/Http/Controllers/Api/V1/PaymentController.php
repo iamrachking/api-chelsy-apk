@@ -22,15 +22,89 @@ use Stripe\Exception\SignatureVerificationException;
 class PaymentController extends Controller
 {
     protected PaymentService $paymentService;
+    protected NotificationService $notificationService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, NotificationService $notificationService)
     {
         $this->paymentService = $paymentService;
+        $this->notificationService = $notificationService;
+    }
+
+    // ======================= STRIPE PAYMENT =======================
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/payments/stripe/create",
+     *     summary="Créer un paiement Stripe (Carte bancaire)",
+     *     tags={"Paiements"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"order_id"},
+     *             @OA\Property(property="order_id", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paiement créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     )
+     * )
+     */
+    public function createStripePayment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:orders,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $order = $request->user()->orders()->findOrFail($request->order_id);
+
+        if ($order->payment->method !== 'card') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette commande n\'utilise pas le paiement par carte',
+            ], 422);
+        }
+
+        $result = $this->paymentService->createStripePayment($order);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Paiement Stripe créé',
+                'data' => [
+                    'payment_id' => $result['payment_id'],
+                    'client_secret' => $result['client_secret'],
+                    'payment_intent_id' => $result['payment_intent_id'],
+                    'publishable_key' => $result['publishable_key'],
+                    'amount' => $result['amount'],
+                    'currency' => $result['currency'],
+                ]
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la création du paiement',
+            'error' => $result['error'] ?? null,
+        ], 500);
     }
 
     /**
      * @OA\Post(
-     *     path="/api/v1/payments/confirm-stripe",
+     *     path="/api/v1/payments/stripe/confirm",
      *     summary="Confirmer un paiement Stripe",
      *     tags={"Paiements"},
      *     security={{"bearerAuth":{}}},
@@ -47,8 +121,7 @@ class PaymentController extends Controller
      *         description="Paiement confirmé",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Paiement confirmé avec succès"),
-     *             @OA\Property(property="data", type="object")
+     *             @OA\Property(property="message", type="string")
      *         )
      *     )
      * )
@@ -80,14 +153,10 @@ class PaymentController extends Controller
         $result = $this->paymentService->confirmStripePayment($request->payment_intent_id, $order);
 
         if ($result['success']) {
-            $order->refresh();
-            
-            // Envoyer une notification
             try {
-                $notificationService = new NotificationService();
-                $notificationService->sendPaymentConfirmation($request->user(), $order);
+                $this->notificationService->sendPaymentConfirmation($request->user(), $order);
             } catch (\Exception $e) {
-                Log::error('Notification Error', [
+                Log::error('Erreur notification paiement', [
                     'order_id' => $order->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -97,7 +166,8 @@ class PaymentController extends Controller
                 'success' => true,
                 'message' => $result['message'],
                 'data' => [
-                    'order' => $order->load(['restaurant', 'address', 'items.dish', 'payment']),
+                    'order_id' => $order->id,
+                    'status' => 'confirmed',
                 ]
             ]);
         }
@@ -107,6 +177,85 @@ class PaymentController extends Controller
             'message' => $result['message'] ?? 'Erreur lors de la confirmation du paiement',
             'error' => $result['error'] ?? null,
         ], 422);
+    }
+
+    // ======================= MOBILE MONEY PAYMENT (FedaPay) =======================
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/payments/mobile-money/create",
+     *     summary="Créer un paiement Mobile Money (FedaPay)",
+     *     tags={"Paiements"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"order_id", "provider", "phone_number"},
+     *             @OA\Property(property="order_id", type="integer", example=1),
+     *             @OA\Property(property="provider", type="string", enum={"MTN", "Moov"}, example="MTN"),
+     *             @OA\Property(property="phone_number", type="string", example="+229 12 34 56 78")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transaction Mobile Money créée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     )
+     * )
+     */
+    public function createMobileMoneyPayment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'order_id' => 'required|exists:orders,id',
+            'provider' => 'required|in:MTN,Moov',
+            'phone_number' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $order = $request->user()->orders()->findOrFail($request->order_id);
+
+        if ($order->payment->method !== 'mobile_money') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette commande n\'utilise pas Mobile Money',
+            ], 422);
+        }
+
+        $result = $this->paymentService->createMobileMoneyPayment(
+            $order,
+            $request->provider,
+            $request->phone_number
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => [
+                    'payment_id' => $result['payment_id'],
+                    'transaction_id' => $result['transaction_id'],
+                    'status' => $result['status'],
+                    'amount' => $result['amount'],
+                    'provider' => $result['provider'],
+                ]
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la création de la transaction',
+            'error' => $result['error'] ?? null,
+        ], 500);
     }
 
     /**
@@ -164,36 +313,41 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $result = $this->paymentService->checkFedaPayStatus($transactionId);
+        $result = $this->paymentService->checkMobileMoneyStatus($transactionId);
 
         if ($result['success']) {
             $status = $result['status'];
             
-            // Mettre à jour le statut du paiement si nécessaire
+            // Mettre à jour le statut si approuvé
             if ($status === 'approved' && $payment->status !== 'completed') {
                 $payment->markAsCompleted();
                 $order->update(['status' => 'confirmed']);
                 
-                // Envoyer notification
                 try {
-                    $notificationService = new NotificationService();
-                    $notificationService->sendPaymentConfirmation($request->user(), $order);
+                    $this->notificationService->sendPaymentConfirmation($request->user(), $order);
                 } catch (\Exception $e) {
-                    Log::error('Notification Error', [
+                    Log::error('Erreur notification paiement', [
                         'order_id' => $order->id,
                         'error' => $e->getMessage(),
                     ]);
                 }
-            } elseif ($status === 'declined' && $payment->status !== 'failed') {
+            } 
+            // Mettre à jour si refusé
+            elseif ($status === 'declined' && $payment->status !== 'failed') {
                 $payment->markAsFailed('Paiement refusé par le fournisseur Mobile Money');
+            }
+            // Mettre à jour si annulé
+            elseif ($status === 'canceled' && $payment->status !== 'failed') {
+                $payment->markAsFailed('Paiement annulé par l\'utilisateur');
             }
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'status' => $status,
-                    'payment' => $payment->fresh(),
-                    'order' => $order->fresh(),
+                    'payment_status' => $payment->status,
+                    'order_status' => $order->status,
+                    'amount' => $payment->amount,
                 ]
             ]);
         }
@@ -205,11 +359,12 @@ class PaymentController extends Controller
         ], 500);
     }
 
+    // ======================= WEBHOOKS =======================
+
     /**
      * @OA\Post(
      *     path="/api/v1/webhooks/stripe",
-     *     summary="Webhook Stripe",
-     *     tags={"Paiements"}
+     *     summary="Webhook Stripe - Confirmation automatique des paiements"
      * )
      */
     public function stripeWebhook(Request $request)
@@ -224,28 +379,14 @@ class PaymentController extends Controller
             } else {
                 $event = json_decode($payload);
             }
+
+            $this->paymentService->handleStripeWebhookEvent($event);
         } catch (\UnexpectedValueException $e) {
-            Log::error('Stripe Webhook Error: Invalid payload', ['error' => $e->getMessage()]);
+            Log::error('Webhook Stripe: payload invalide', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Invalid payload'], 400);
         } catch (SignatureVerificationException $e) {
-            Log::error('Stripe Webhook Error: Invalid signature', ['error' => $e->getMessage()]);
+            Log::error('Webhook Stripe: signature invalide', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Invalid signature'], 400);
-        }
-
-        // Gérer les événements
-        switch ($event->type) {
-            case 'payment_intent.succeeded':
-                $paymentIntent = $event->data->object;
-                $this->handlePaymentIntentSucceeded($paymentIntent);
-                break;
-
-            case 'payment_intent.payment_failed':
-                $paymentIntent = $event->data->object;
-                $this->handlePaymentIntentFailed($paymentIntent);
-                break;
-
-            default:
-                Log::info('Stripe Webhook: Unhandled event type', ['type' => $event->type]);
         }
 
         return response()->json(['received' => true]);
@@ -254,177 +395,27 @@ class PaymentController extends Controller
     /**
      * @OA\Post(
      *     path="/api/v1/webhooks/fedapay",
-     *     summary="Webhook FedaPay",
-     *     tags={"Paiements"}
+     *     summary="Webhook FedaPay - Confirmation automatique des paiements Mobile Money"
      * )
      */
     public function fedaPayWebhook(Request $request)
     {
         $payload = $request->all();
 
-        Log::info('FedaPay Webhook Received', ['payload' => $payload]);
+        Log::info('Webhook FedaPay reçu', ['payload' => $payload]);
 
-        // Vérifier la signature (optionnel mais recommandé)
-        // $signature = $request->header('X-FedaPay-Signature');
-        // Implémenter la vérification de signature selon la doc FedaPay
+        try {
+            // Vérifier la signature FedaPay (optionnel mais recommandé)
+            // À implémenter selon la doc FedaPay
 
-        $eventType = $payload['event'] ?? null;
-        $transaction = $payload['transaction'] ?? null;
-
-        if (!$eventType || !$transaction) {
-            return response()->json(['error' => 'Invalid payload'], 400);
-        }
-
-        switch ($eventType) {
-            case 'transaction.approved':
-                $this->handleFedaPayApproved($transaction);
-                break;
-
-            case 'transaction.declined':
-                $this->handleFedaPayDeclined($transaction);
-                break;
-
-            case 'transaction.canceled':
-                $this->handleFedaPayCanceled($transaction);
-                break;
-
-            default:
-                Log::info('FedaPay Webhook: Unhandled event', ['event' => $eventType]);
+            $this->paymentService->handleFedaPayWebhookEvent($payload);
+        } catch (\Exception $e) {
+            Log::error('Erreur traitement webhook FedaPay', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['error' => 'Processing error'], 500);
         }
 
         return response()->json(['received' => true]);
-    }
-
-    /**
-     * Gérer un paiement Stripe réussi
-     */
-    private function handlePaymentIntentSucceeded($paymentIntent)
-    {
-        $paymentId = $paymentIntent->metadata->payment_id ?? null;
-        $orderId = $paymentIntent->metadata->order_id ?? null;
-
-        if ($orderId) {
-            $order = Order::find($orderId);
-            if ($order && $order->payment) {
-                $order->payment->update([
-                    'status' => 'completed',
-                    'payment_data' => array_merge(
-                        $order->payment->payment_data ?? [],
-                        [
-                            'webhook_received_at' => now()->toDateTimeString(),
-                            'payment_method' => $paymentIntent->payment_method ?? null,
-                        ]
-                    ),
-                ]);
-
-                $order->update(['status' => 'confirmed']);
-
-                Log::info('Stripe Payment Succeeded', [
-                    'order_id' => $orderId,
-                    'payment_intent' => $paymentIntent->id,
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Gérer un paiement Stripe échoué
-     */
-    private function handlePaymentIntentFailed($paymentIntent)
-    {
-        $orderId = $paymentIntent->metadata->order_id ?? null;
-
-        if ($orderId) {
-            $order = Order::find($orderId);
-            if ($order && $order->payment) {
-                $order->payment->markAsFailed(
-                    $paymentIntent->last_payment_error->message ?? 'Paiement échoué'
-                );
-
-                Log::error('Stripe Payment Failed', [
-                    'order_id' => $orderId,
-                    'payment_intent' => $paymentIntent->id,
-                    'error' => $paymentIntent->last_payment_error->message ?? 'Unknown',
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Gérer un paiement FedaPay approuvé
-     */
-    private function handleFedaPayApproved($transaction)
-    {
-        $transactionId = $transaction['id'] ?? null;
-
-        if ($transactionId) {
-            $payment = Payment::where('transaction_id', $transactionId)->first();
-            
-            if ($payment) {
-                $payment->markAsCompleted();
-                $payment->order->update(['status' => 'confirmed']);
-
-                // Envoyer notification
-                try {
-                    $notificationService = new NotificationService();
-                    $notificationService->sendPaymentConfirmation(
-                        $payment->order->user,
-                        $payment->order
-                    );
-                } catch (\Exception $e) {
-                    Log::error('Notification Error', [
-                        'payment_id' => $payment->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-
-                Log::info('FedaPay Payment Approved', [
-                    'transaction_id' => $transactionId,
-                    'order_id' => $payment->order_id,
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Gérer un paiement FedaPay refusé
-     */
-    private function handleFedaPayDeclined($transaction)
-    {
-        $transactionId = $transaction['id'] ?? null;
-
-        if ($transactionId) {
-            $payment = Payment::where('transaction_id', $transactionId)->first();
-            
-            if ($payment) {
-                $payment->markAsFailed('Paiement refusé par le fournisseur Mobile Money');
-
-                Log::error('FedaPay Payment Declined', [
-                    'transaction_id' => $transactionId,
-                    'order_id' => $payment->order_id,
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Gérer un paiement FedaPay annulé
-     */
-    private function handleFedaPayCanceled($transaction)
-    {
-        $transactionId = $transaction['id'] ?? null;
-
-        if ($transactionId) {
-            $payment = Payment::where('transaction_id', $transactionId)->first();
-            
-            if ($payment) {
-                $payment->markAsFailed('Paiement annulé par l\'utilisateur');
-
-                Log::warning('FedaPay Payment Canceled', [
-                    'transaction_id' => $transactionId,
-                    'order_id' => $payment->order_id,
-                ]);
-            }
-        }
     }
 }

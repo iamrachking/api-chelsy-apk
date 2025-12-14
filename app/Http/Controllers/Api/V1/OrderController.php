@@ -26,6 +26,15 @@ use Illuminate\Support\Facades\Validator;
  */
 class OrderController extends Controller
 {
+    protected PaymentService $paymentService;
+    protected NotificationService $notificationService;
+
+    public function __construct(PaymentService $paymentService, NotificationService $notificationService)
+    {
+        $this->paymentService = $paymentService;
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * @OA\Get(
      *     path="/api/v1/orders",
@@ -43,22 +52,30 @@ class OrderController extends Controller
      *         description="Liste des commandes",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object", @OA\Property(property="orders", type="array", @OA\Items(type="object")))
+     *             @OA\Property(property="data", type="object")
      *         )
      *     )
      * )
      */
     public function index(Request $request)
     {
+        $perPage = $request->get('per_page', 15);
+        
         $orders = $request->user()->orders()
             ->with(['restaurant', 'address', 'items.dish', 'payment'])
             ->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'data' => [
                 'orders' => OrderResource::collection($orders),
+                'pagination' => [
+                    'current_page' => $orders->currentPage(),
+                    'last_page' => $orders->lastPage(),
+                    'total' => $orders->total(),
+                    'per_page' => $orders->perPage(),
+                ],
             ]
         ]);
     }
@@ -73,52 +90,26 @@ class OrderController extends Controller
      *         required=true,
      *         @OA\JsonContent(
      *             required={"type", "payment_method"},
-     *             @OA\Property(property="type", type="string", enum={"delivery", "pickup"}, example="delivery", description="Type de commande : delivery (livraison) ou pickup (à emporter)"),
-     *             @OA\Property(property="address_id", type="integer", nullable=true, example=1, description="ID de l'adresse (requis si type=delivery)"),
-     *             @OA\Property(property="payment_method", type="string", enum={"card", "cash", "mobile_money"}, example="card"),
-     *             @OA\Property(property="mobile_money_provider", type="string", nullable=true, enum={"MTN", "Moov"}, description="Fournisseur Mobile Money (requis si payment_method=mobile_money)"),
-     *             @OA\Property(property="mobile_money_number", type="string", nullable=true, example="+229 12 34 56 78", description="Numéro Mobile Money (requis si payment_method=mobile_money)"),
-     *             @OA\Property(property="promo_code", type="string", nullable=true, example="PROMO10"),
-     *             @OA\Property(property="scheduled_at", type="string", format="datetime", nullable=true, example="2025-11-27 19:00:00"),
-     *             @OA\Property(property="special_instructions", type="string", nullable=true, example="Sonner 2 fois", description="Instructions spéciales pour la commande")
+     *             @OA\Property(property="type", type="string", enum={"delivery", "pickup"}, example="delivery"),
+     *             @OA\Property(property="address_id", type="integer", nullable=true, example=1),
+     *             @OA\Property(property="payment_method", type="string", enum={"card", "cash", "mobile_money"}, example="cash"),
+     *             @OA\Property(property="mobile_money_provider", type="string", nullable=true, enum={"MTN", "Moov"}),
+     *             @OA\Property(property="mobile_money_number", type="string", nullable=true, example="+229 12 34 56 78"),
+     *             @OA\Property(property="promo_code", type="string", nullable=true),
+     *             @OA\Property(property="scheduled_at", type="string", format="datetime", nullable=true),
+     *             @OA\Property(property="special_instructions", type="string", nullable=true)
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Commande créée avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commande créée avec succès"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="order", type="object"),
-     *                 @OA\Property(property="payment", type="object", nullable=true)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Erreur de validation"
-     *     )
+     *     @OA\Response(response=201, description="Commande créée")
      * )
      */
     public function store(CreateOrderRequest $request)
     {
-
         $user = $request->user();
         $cart = Cart::with('items.dish')->where('user_id', $user->id)->first();
 
-        if (!$cart) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Votre panier est vide',
-            ], 422);
-        }
-
-        $cart->load('items.dish');
-        
-        if ($cart->items->isEmpty()) {
+        // ==================== VALIDATIONS ====================
+        if (!$cart || $cart->items->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Votre panier est vide',
@@ -136,10 +127,16 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // Calculer les frais de livraison
+        // Vérifier l'adresse pour la livraison
         $deliveryFee = 0;
-        $deliveryDistance = 0;
         if ($request->type === 'delivery') {
+            if (!$request->address_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Une adresse de livraison est requise',
+                ], 422);
+            }
+
             $address = $user->addresses()->findOrFail($request->address_id);
             $deliveryService = new DeliveryService();
             $deliveryInfo = $deliveryService->calculateDeliveryFee($restaurant, $address);
@@ -152,10 +149,9 @@ class OrderController extends Controller
             }
             
             $deliveryFee = $deliveryInfo['fee'];
-            $deliveryDistance = $deliveryInfo['distance'];
         }
 
-        // Calculer la réduction
+        // Vérifier et appliquer le code promo
         $discountAmount = 0;
         $promoCode = null;
         if ($request->promo_code) {
@@ -164,28 +160,12 @@ class OrderController extends Controller
             if (!$promoCode) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Le code promo n\'existe pas.',
+                    'message' => 'Le code promo n\'existe pas',
                 ], 422);
             }
             
             if (!$promoCode->isValidForUser($user->id, $subtotal)) {
-                // Messages d'erreur plus détaillés
-                $errorMessage = 'Le code promo n\'est pas valide.';
-                
-                if (!$promoCode->is_active) {
-                    $errorMessage = 'Ce code promo est désactivé.';
-                } elseif ($promoCode->starts_at && now() < $promoCode->starts_at) {
-                    $errorMessage = 'Ce code promo n\'est pas encore actif.';
-                } elseif ($promoCode->expires_at && now() > $promoCode->expires_at) {
-                    $errorMessage = 'Ce code promo a expiré.';
-                } elseif ($subtotal < $promoCode->minimum_order_amount) {
-                    $errorMessage = "Le montant minimum de commande pour ce code est de {$promoCode->minimum_order_amount} FCFA.";
-                } elseif ($promoCode->max_uses && $promoCode->usages()->count() >= $promoCode->max_uses) {
-                    $errorMessage = 'Ce code promo a atteint sa limite d\'utilisations.';
-                } elseif ($promoCode->usages()->where('user_id', $user->id)->count() >= $promoCode->max_uses_per_user) {
-                    $errorMessage = 'Vous avez déjà utilisé ce code promo le nombre maximum de fois autorisé.';
-                }
-                
+                $errorMessage = $this->getPromoErrorMessage($promoCode, $subtotal, $user->id);
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage,
@@ -199,7 +179,7 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-            // Créer la commande
+            // ==================== CRÉER LA COMMANDE ====================
             $order = Order::create([
                 'user_id' => $user->id,
                 'restaurant_id' => $restaurant->id,
@@ -215,7 +195,7 @@ class OrderController extends Controller
                 'special_instructions' => $request->special_instructions,
             ]);
 
-            // Créer les articles de commande
+            // ==================== CRÉER LES ITEMS ====================
             foreach ($cart->items as $cartItem) {
                 OrderItem::create([
                     'order_id' => $order->id,
@@ -228,11 +208,10 @@ class OrderController extends Controller
                     'special_instructions' => $cartItem->special_instructions,
                 ]);
 
-                // Mettre à jour le compteur de commandes du plat
                 $cartItem->dish->increment('order_count');
             }
 
-            // Créer le paiement
+            // ==================== CRÉER LE PAIEMENT ====================
             $payment = \App\Models\Payment::create([
                 'order_id' => $order->id,
                 'method' => $request->payment_method,
@@ -240,69 +219,30 @@ class OrderController extends Controller
                 'amount' => $total,
             ]);
 
-            // Traiter le paiement selon la méthode
-// Traiter le paiement selon la méthode
-$paymentService = new PaymentService();
-$paymentResult = null;
+            // ==================== TRAITER LE PAIEMENT ====================
+            $paymentData = $this->processPayment($order, $request->payment_method, $request);
 
-if ($request->payment_method === 'card') {
-    // Paiement par carte via Stripe
-    $paymentResult = $paymentService->createStripePayment($order);
-    
-    if (!$paymentResult['success']) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur lors de la création du paiement',
-            'error' => $paymentResult['error'] ?? 'Erreur inconnue',
-        ], 500);
-    }
-} elseif ($request->payment_method === 'mobile_money') {
-    // Paiement Mobile Money (simulé)
-    $paymentResult = $paymentService->processMobileMoneyPayment(
-        $order,
-        $request->mobile_money_provider ?? 'MTN',
-        $request->mobile_money_number ?? ''
-    );
-    
-    if (!$paymentResult['success']) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur lors de l\'initialisation du paiement Mobile Money',
-            'error' => $paymentResult['error'] ?? 'Erreur inconnue',
-        ], 500);
-    }
-} else {
-    // Paiement en espèces
-    $paymentResult = $paymentService->processCashPayment($order);
-    
-    if (!$paymentResult['success']) {
-        DB::rollBack();
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur lors du traitement du paiement en espèces',
-        ], 500);
-    }
-}
+            if (!$paymentData['success']) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => $paymentData['message'],
+                    'error' => $paymentData['error'] ?? null,
+                ], 500);
+            }
 
-            // Enregistrer l'utilisation du code promo
-            // Re-vérifier que le code est toujours valide avant d'enregistrer l'utilisation
-            // (pour éviter les cas où le code expire ou atteint max_uses entre la validation et l'enregistrement)
+            // ==================== ENREGISTRER LE CODE PROMO ====================
             if ($promoCode) {
-                // Recharger le code promo pour avoir les données à jour
                 $promoCode->refresh();
                 
-                // Re-valider une dernière fois avant d'enregistrer
                 if (!$promoCode->isValidForUser($user->id, $subtotal)) {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
-                        'message' => 'Le code promo n\'est plus valide. Il a peut-être expiré ou atteint sa limite d\'utilisation.',
+                        'message' => 'Le code promo n\'est plus valide',
                     ], 422);
                 }
                 
-                // Enregistrer l'utilisation
                 \App\Models\PromoCodeUsage::create([
                     'promo_code_id' => $promoCode->id,
                     'user_id' => $user->id,
@@ -311,52 +251,40 @@ if ($request->payment_method === 'card') {
                 ]);
             }
 
-            // Vider le panier
+            // ==================== VIDER LE PANIER ====================
             $cart->items()->delete();
 
             DB::commit();
 
-            // Envoyer une notification de confirmation de commande
+            // ==================== ENVOYER NOTIFICATION ====================
             try {
-                $notificationService = new NotificationService();
-                $notificationService->sendOrderStatusUpdate($user, $order->fresh(), 'pending');
+                $this->notificationService->sendOrderStatusUpdate($user, $order->fresh(), 'pending');
             } catch (\Exception $e) {
-                // Ne pas faire échouer la commande si la notification échoue
-                Log::error('Erreur lors de l\'envoi de notification de commande', [
+                Log::error('Erreur notification commande', [
                     'order_id' => $order->id,
                     'error' => $e->getMessage(),
                 ]);
             }
 
+            // ==================== CONSTRUIRE LA RÉPONSE ====================
             $responseData = [
                 'order' => new OrderResource($order->load(['restaurant', 'address', 'items.dish', 'payment', 'promoCode'])),
+                'payment' => $paymentData['response'] ?? null,
             ];
-            // AJOUTER : Informations de paiement Stripe
-            if ($request->payment_method === 'card' && $paymentResult && isset($paymentResult['client_secret'])) {
-                $responseData['payment'] = [
-                    'client_secret' => $paymentResult['client_secret'],
-                    'payment_intent_id' => $paymentResult['payment_intent_id'],
-                    'publishable_key' => $paymentResult['publishable_key'],
-                ];
-            }
-
-            // AJOUTER : Informations de paiement Mobile Money
-            if ($request->payment_method === 'mobile_money' && $paymentResult && isset($paymentResult['payment_url'])) {
-                $responseData['payment'] = [
-                    'transaction_id' => $paymentResult['transaction_id'],
-                    'payment_url' => $paymentResult['payment_url'],
-                    'token' => $paymentResult['token'],
-                ];
-            }
-
 
             return response()->json([
                 'success' => true,
                 'message' => 'Commande créée avec succès',
                 'data' => $responseData,
             ], 201);
+
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Erreur création commande', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la création de la commande',
@@ -366,26 +294,145 @@ if ($request->payment_method === 'card') {
     }
 
     /**
+     * Traiter le paiement selon la méthode
+     */
+    private function processPayment(Order $order, string $method, Request $request): array
+    {
+        if ($method === 'card') {
+            // Paiement par CARTE via Stripe
+            $result = $this->paymentService->createStripePayment($order);
+            
+            if (!$result['success']) {
+                return [
+                    'success' => false,
+                    'message' => 'Erreur lors de la création du paiement Stripe',
+                    'error' => $result['error'] ?? null,
+                ];
+            }
+
+            return [
+                'success' => true,
+                'response' => [
+                    'type' => 'stripe',
+                    'client_secret' => $result['client_secret'],
+                    'payment_intent_id' => $result['payment_intent_id'],
+                    'publishable_key' => $result['publishable_key'],
+                    'amount' => $result['amount'],
+                    'currency' => $result['currency'],
+                    'status' => 'pending',
+                    'message' => 'Veuillez compléter le paiement avec votre carte bancaire',
+                    'next_action' => [
+                        'endpoint' => '/api/v1/payments/stripe/confirm',
+                        'method' => 'POST',
+                        'body' => [
+                            'order_id' => $order->id,
+                            'payment_intent_id' => $result['payment_intent_id'],
+                        ]
+                    ]
+                ]
+            ];
+
+        } elseif ($method === 'mobile_money') {
+            // Paiement MOBILE MONEY via FedaPay
+            $result = $this->paymentService->createMobileMoneyPayment(
+                $order,
+                $request->mobile_money_provider ?? 'MTN',
+                $request->mobile_money_number ?? ''
+            );
+
+            if (!$result['success']) {
+                return [
+                    'success' => false,
+                    'message' => 'Erreur lors de la création du paiement Mobile Money',
+                    'error' => $result['error'] ?? null,
+                ];
+            }
+
+            return [
+                'success' => true,
+                'response' => [
+                    'type' => 'mobile_money',
+                    'transaction_id' => $result['transaction_id'],
+                    'status' => $result['status'],
+                    'amount' => $result['amount'],
+                    'provider' => $result['provider'],
+                    'message' => $result['message'],
+                    'next_action' => [
+                        'endpoint' => '/api/v1/payments/mobile-money/status',
+                        'method' => 'POST',
+                        'body' => [
+                            'order_id' => $order->id,
+                        ],
+                        'polling' => [
+                            'enabled' => true,
+                            'interval_seconds' => 5,
+                            'max_attempts' => 120,
+                        ]
+                    ]
+                ]
+            ];
+
+        } else {
+            // Paiement en ESPÈCES
+            $result = $this->paymentService->processCashPayment($order);
+
+            if (!$result['success']) {
+                return [
+                    'success' => false,
+                    'message' => 'Erreur lors du traitement du paiement en espèces',
+                ];
+            }
+
+            return [
+                'success' => true,
+                'response' => [
+                    'type' => 'cash',
+                    'status' => 'confirmed',
+                    'amount' => $result['amount'],
+                    'message' => $result['message'],
+                ]
+            ];
+        }
+    }
+
+    /**
+     * Obtenir le message d'erreur pour un code promo invalide
+     */
+    private function getPromoErrorMessage(\App\Models\PromoCode $promoCode, float $subtotal, int $userId): string
+    {
+        if (!$promoCode->is_active) {
+            return 'Ce code promo est désactivé';
+        }
+        
+        if ($promoCode->starts_at && now() < $promoCode->starts_at) {
+            return 'Ce code promo n\'est pas encore actif';
+        }
+        
+        if ($promoCode->expires_at && now() > $promoCode->expires_at) {
+            return 'Ce code promo a expiré';
+        }
+        
+        if ($subtotal < $promoCode->minimum_order_amount) {
+            return "Le montant minimum de commande est de {$promoCode->minimum_order_amount} FCFA";
+        }
+        
+        if ($promoCode->max_uses && $promoCode->usages()->count() >= $promoCode->max_uses) {
+            return 'Ce code promo a atteint sa limite d\'utilisations';
+        }
+        
+        if ($promoCode->usages()->where('user_id', $userId)->count() >= $promoCode->max_uses_per_user) {
+            return 'Vous avez déjà utilisé ce code promo le maximum de fois autorisé';
+        }
+
+        return 'Ce code promo n\'est pas valide';
+    }
+
+    /**
      * @OA\Get(
      *     path="/api/v1/orders/{id}",
      *     summary="Détails d'une commande",
      *     tags={"Commandes"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la commande",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Détails de la commande",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object", @OA\Property(property="order", type="object"))
-     *         )
-     *     )
+     *     security={{"bearerAuth":{}}}
      * )
      */
     public function show(Request $request, $id)
@@ -407,34 +454,7 @@ if ($request->payment_method === 'card') {
      *     path="/api/v1/orders/{id}/cancel",
      *     summary="Annuler une commande",
      *     tags={"Commandes"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la commande",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"reason"},
-     *             @OA\Property(property="reason", type="string", example="Changement d'avis")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Commande annulée",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commande annulée"),
-     *             @OA\Property(property="data", type="object", @OA\Property(property="order", type="object"))
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Commande ne peut plus être annulée"
-     *     )
+     *     security={{"bearerAuth":{}}}
      * )
      */
     public function cancel(Request $request, $id)
@@ -469,39 +489,9 @@ if ($request->payment_method === 'card') {
             'success' => true,
             'message' => 'Commande annulée',
             'data' => [
-                'order' => $order->fresh(),
+                'order' => new OrderResource($order->fresh()),
             ]
         ]);
-    }
-
-    /**
-     * @OA\Get(
-     *     path="/api/v1/orders/{id}/invoice/download",
-     *     summary="Télécharger la facture PDF",
-     *     tags={"Commandes"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la commande",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Fichier PDF de la facture",
-     *         @OA\MediaType(
-     *             mediaType="application/pdf"
-     *         )
-     *     )
-     * )
-     */
-    public function downloadInvoice(Request $request, $id)
-    {
-        $order = $request->user()->orders()->findOrFail($id);
-        
-        $invoiceService = new InvoiceService();
-        return $invoiceService->downloadInvoice($order);
     }
 
     /**
@@ -509,27 +499,7 @@ if ($request->payment_method === 'card') {
      *     path="/api/v1/orders/{id}/invoice",
      *     summary="Obtenir la facture en base64",
      *     tags={"Commandes"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la commande",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Facture en base64",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="invoice_base64", type="string", example="JVBERi0xLjQKJeLjz9MK..."),
-     *                 @OA\Property(property="filename", type="string", example="facture_ORD-2024-001.pdf")
-     *             )
-     *         )
-     *     )
+     *     security={{"bearerAuth":{}}}
      * )
      */
     public function getInvoice(Request $request, $id)
@@ -549,27 +519,26 @@ if ($request->payment_method === 'card') {
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/v1/orders/{id}/invoice/download",
+     *     summary="Télécharger la facture PDF",
+     *     tags={"Commandes"},
+     *     security={{"bearerAuth":{}}}
+     * )
+     */
+    public function downloadInvoice(Request $request, $id)
+    {
+        $order = $request->user()->orders()->findOrFail($id);
+        $invoiceService = new InvoiceService();
+        return $invoiceService->downloadInvoice($order);
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/v1/orders/{id}/reorder",
-     *     summary="Recommander une commande (ajouter au panier)",
+     *     summary="Recommander une commande",
      *     tags={"Commandes"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID de la commande à recommander",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Commande ajoutée au panier",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commande ajoutée au panier"),
-     *             @OA\Property(property="data", type="object", @OA\Property(property="cart", type="object"))
-     *         )
-     *     )
+     *     security={{"bearerAuth":{}}}
      * )
      */
     public function reorder(Request $request, $id)
@@ -580,11 +549,8 @@ if ($request->payment_method === 'card') {
 
         $user = $request->user();
         $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-
-        // Vider le panier actuel
         $cart->items()->delete();
 
-        // Ajouter les plats de la commande précédente au panier
         foreach ($originalOrder->items as $orderItem) {
             $dish = \App\Models\Dish::find($orderItem->dish_id);
             
@@ -603,9 +569,7 @@ if ($request->payment_method === 'card') {
         return response()->json([
             'success' => true,
             'message' => 'Commande ajoutée au panier',
-            'data' => [
-                'cart' => $cart->load('items.dish'),
-            ]
+            'data' => ['cart' => $cart->load('items.dish')]
         ]);
     }
 }

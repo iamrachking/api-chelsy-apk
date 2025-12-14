@@ -60,7 +60,7 @@ Route::prefix('v1')->group(function () {
     // Avis publics
     Route::get('/dishes/{dishId}/reviews', [ReviewController::class, 'dishReviews']);
 
-    // Webhooks (sans authentification)
+    // Webhooks (sans authentification - IMPORTANT!)
     Route::post('/webhooks/stripe', [PaymentController::class, 'stripeWebhook'])->name('webhooks.stripe');
     Route::post('/webhooks/fedapay', [PaymentController::class, 'fedaPayWebhook'])->name('webhooks.fedapay');
 });
@@ -86,7 +86,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
     Route::delete('/cart/items/{id}', [CartController::class, 'removeItem']);
     Route::delete('/cart', [CartController::class, 'clear']);
 
-    // Commandes
+    // ==================== COMMANDES ====================
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
@@ -94,9 +94,15 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
     Route::get('/orders/{id}/invoice', [OrderController::class, 'getInvoice']);
     Route::get('/orders/{id}/invoice/download', [OrderController::class, 'downloadInvoice']);
     Route::post('/orders/{id}/reorder', [OrderController::class, 'reorder']);
+    Route::get('/orders/{order_id}/tracking', [DeliveryTrackingController::class, 'getOrderTracking']);
 
-    // Paiements
-    Route::post('/payments/confirm-stripe', [PaymentController::class, 'confirmStripePayment']);
+    // ==================== PAIEMENTS ====================
+    // Stripe
+    Route::post('/payments/stripe/create', [PaymentController::class, 'createStripePayment']);
+    Route::post('/payments/stripe/confirm', [PaymentController::class, 'confirmStripePayment']);
+
+    // Mobile Money (FedaPay)
+    Route::post('/payments/mobile-money/create', [PaymentController::class, 'createMobileMoneyPayment']);
     Route::post('/payments/mobile-money/status', [PaymentController::class, 'checkMobileMoneyStatus']);
 
     // Avis
@@ -109,9 +115,6 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
 
     // Codes promo
     Route::post('/promo-codes/validate', [PromoCodeController::class, 'validate']);
-
-    // Paiements
-    Route::post('/payments/confirm-stripe', [PaymentController::class, 'confirmStripePayment']);
 
     // Réclamations
     Route::get('/complaints', [ComplaintController::class, 'index']);
@@ -126,6 +129,5 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
     Route::post('/delivery/position', [DeliveryTrackingController::class, 'updatePosition']);
     Route::get('/delivery/position/current', [DeliveryTrackingController::class, 'getCurrentPosition']);
     Route::get('/delivery/position/history', [DeliveryTrackingController::class, 'getPositionHistory']);
-    Route::get('/orders/{order_id}/tracking', [DeliveryTrackingController::class, 'getOrderTracking']);
     Route::get('/delivery/drivers/available', [DeliveryTrackingController::class, 'getAvailableDrivers']);
 });
