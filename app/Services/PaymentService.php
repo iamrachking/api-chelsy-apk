@@ -8,8 +8,15 @@ use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
 use Stripe\Exception\ApiErrorException;
-use FedaPay\FedaPay;
-use FedaPay\Transaction;
+
+// ✅ Vérifier si FedaPay est installé avant d'importer
+if (class_exists('\FedaPay\FedaPay')) {
+    use \FedaPay\FedaPay;
+    use \FedaPay\Transaction;
+    $FEDAPAY_AVAILABLE = true;
+} else {
+    $FEDAPAY_AVAILABLE = false;
+}
 
 class PaymentService
 {
@@ -21,20 +28,18 @@ class PaymentService
             Stripe::setApiKey($stripeSecret);
         }
 
-        // Configuration FedaPay
-        $fedapaySecret = config('services.fedapay.secret_key');
-        if ($fedapaySecret) {
-            FedaPay::setApiKey($fedapaySecret);
-            FedaPay::setEnvironment(config('services.fedapay.environment', 'sandbox'));
+        // Configuration FedaPay (si disponible)
+        if ($FEDAPAY_AVAILABLE) {
+            $fedapaySecret = config('services.fedapay.secret_key');
+            if ($fedapaySecret) {
+                FedaPay::setApiKey($fedapaySecret);
+                FedaPay::setEnvironment(config('services.fedapay.environment', 'sandbox'));
+            }
         }
     }
 
-    // ======================== STRIPE PAYMENT (CARTE BANCAIRE) ========================
+    // ======================== STRIPE PAYMENT ========================
 
-    /**
-     * Créer un PaymentIntent Stripe pour une commande
-     * Retourne les informations nécessaires pour le client (Flutter/Web)
-     */
     public function createStripePayment(Order $order): array
     {
         try {
@@ -52,8 +57,8 @@ class PaymentService
 
             // Créer un PaymentIntent sur Stripe
             $paymentIntent = PaymentIntent::create([
-                'amount' => (int)($order->total * 100), // Montant en centimes
-                'currency' => 'xof', // Francs CFA Ouest-africain
+                'amount' => (int)($order->total * 100),
+                'currency' => 'xof',
                 'metadata' => [
                     'order_id' => $order->id,
                     'order_number' => $order->order_number,
@@ -64,11 +69,10 @@ class PaymentService
                 'automatic_payment_methods' => [
                     'enabled' => true,
                 ],
-                'description' => "Commande {$order->order_number} - {$order->restaurant->name}",
+                'description' => "Commande {$order->order_number}",
                 'receipt_email' => $order->user->email,
             ]);
 
-            // Sauvegarder les infos du PaymentIntent en base
             $payment->update([
                 'transaction_id' => $paymentIntent->id,
                 'status' => 'pending',
@@ -122,10 +126,6 @@ class PaymentService
         }
     }
 
-    /**
-     * Confirmer un paiement Stripe après que le client a saisi sa carte
-     * Appelé depuis le Flutter/Web après confirmation client
-     */
     public function confirmStripePayment(string $paymentIntentId, Order $order): array
     {
         try {
@@ -145,7 +145,6 @@ class PaymentService
                 return ['success' => true, 'message' => 'Paiement confirmé avec succès'];
             }
 
-            // Récupérer le PaymentIntent de Stripe
             $paymentIntent = PaymentIntent::retrieve($paymentIntentId);
 
             if ($paymentIntent->status === 'succeeded') {
@@ -176,7 +175,6 @@ class PaymentService
                 ];
             }
 
-            // Si le paiement n'est pas encore réussi
             return [
                 'success' => false,
                 'message' => 'Le paiement n\'a pas été confirmé. Statut: ' . $paymentIntent->status,
@@ -228,12 +226,8 @@ class PaymentService
         ];
     }
 
-    // ======================== FEDAPAY PAYMENT (MOBILE MONEY) ========================
+    // ======================== FEDAPAY PAYMENT ========================
 
-    /**
-     * Créer une transaction FedaPay pour Mobile Money
-     * Retourne l'URL de paiement
-     */
     public function createMobileMoneyPayment(Order $order, string $provider, string $phoneNumber): array
     {
         try {
@@ -241,6 +235,12 @@ class PaymentService
             
             if (!$payment) {
                 throw new \Exception('Aucun paiement associé à cette commande');
+            }
+
+            // ✅ VÉRIFIER SI FEDAPAY EST DISPONIBLE
+            if (!class_exists('\FedaPay\FedaPay')) {
+                Log::warning('FedaPay non installé - simulation du paiement Mobile Money');
+                return $this->simulateMobileMoneyPayment($payment, $order, $provider, $phoneNumber);
             }
 
             // Vérifier la configuration FedaPay
@@ -273,7 +273,6 @@ class PaymentService
                 ],
             ]);
 
-            // Sauvegarder les infos de la transaction
             $payment->update([
                 'transaction_id' => $transaction->id,
                 'mobile_money_provider' => $provider,
@@ -319,21 +318,21 @@ class PaymentService
         }
     }
 
-    /**
-     * Vérifier le statut d'une transaction FedaPay
-     * Appelé régulièrement depuis le Flutter pour vérifier si le paiement est fait
-     */
     public function checkMobileMoneyStatus(string $transactionId): array
     {
         try {
+            // ✅ VÉRIFIER SI FEDAPAY EST DISPONIBLE
+            if (!class_exists('\FedaPay\FedaPay')) {
+                Log::warning('FedaPay non installé - vérification simulée');
+                return ['success' => true, 'status' => 'approved'];
+            }
+
             if (!config('services.fedapay.secret_key')) {
                 Log::warning('FedaPay non configuré - vérification simulée');
                 return ['success' => true, 'status' => 'approved'];
             }
 
-            // Récupérer le statut de la transaction FedaPay
             $transaction = Transaction::retrieve($transactionId);
-
             $status = $this->mapFedaPayStatus($transaction->status);
 
             Log::info('Statut FedaPay vérifié', [
@@ -386,20 +385,16 @@ class PaymentService
 
     private function normalizePhoneNumber(string $phoneNumber): string
     {
-        // Supprimer tous les caractères non numériques sauf le +
         $cleaned = preg_replace('/[^\d+]/', '', $phoneNumber);
         
-        // Si commence par +, garder le format international
         if (strpos($cleaned, '+') === 0) {
             return $cleaned;
         }
 
-        // Si commence par 00, remplacer par +
         if (strpos($cleaned, '00') === 0) {
             return '+' . substr($cleaned, 2);
         }
 
-        // Sinon, supposer le pays Bénin (+229)
         if (!strpos($cleaned, '+')) {
             return '+229' . $cleaned;
         }
@@ -419,12 +414,8 @@ class PaymentService
         };
     }
 
-    // ======================== CASH PAYMENT (ESPÈCES) ========================
+    // ======================== CASH PAYMENT ========================
 
-    /**
-     * Traiter un paiement en espèces (à la livraison)
-     * Aucun appel API, juste enregistrer que le paiement sera fait à la livraison
-     */
     public function processCashPayment(Order $order): array
     {
         try {
@@ -434,11 +425,8 @@ class PaymentService
                 throw new \Exception('Aucun paiement associé à cette commande');
             }
 
-            // Générer un ID de transaction pour le suivi
             $transactionId = 'cash_' . strtoupper(uniqid());
 
-            // Mettre à jour le paiement avec le statut "pending"
-            // (en attente que le client paie à la livraison)
             $payment->update([
                 'transaction_id' => $transactionId,
                 'status' => 'pending',
@@ -449,7 +437,6 @@ class PaymentService
                 ],
             ]);
 
-            // Confirmer la commande immédiatement (elle sera traitée)
             $order->update(['status' => 'confirmed']);
 
             Log::info('Paiement en espèces enregistré', [
@@ -479,9 +466,6 @@ class PaymentService
 
     // ======================== WEBHOOK HANDLERS ========================
 
-    /**
-     * Traiter les événements Stripe via webhook
-     */
     public function handleStripeWebhookEvent($event): void
     {
         switch ($event->type) {
@@ -540,9 +524,6 @@ class PaymentService
         }
     }
 
-    /**
-     * Traiter les événements FedaPay via webhook
-     */
     public function handleFedaPayWebhookEvent(array $payload): void
     {
         $eventType = $payload['event'] ?? null;
