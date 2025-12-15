@@ -10,12 +10,6 @@ class NotificationService
 {
     /**
      * Envoyer une notification push à un utilisateur
-     *
-     * @param User $user
-     * @param string $title
-     * @param string $body
-     * @param array $data
-     * @return bool
      */
     public function sendToUser(User $user, string $title, string $body, array $data = []): bool
     {
@@ -29,12 +23,6 @@ class NotificationService
 
     /**
      * Envoyer une notification push à un token FCM spécifique
-     *
-     * @param string $token
-     * @param string $title
-     * @param string $body
-     * @param array $data
-     * @return bool
      */
     public function sendToToken(string $token, string $title, string $body, array $data = []): bool
     {
@@ -45,7 +33,6 @@ class NotificationService
             return false;
         }
 
-        // Utiliser l'API Legacy qui est plus simple et stable
         return $this->sendWithServerKey($token, $title, $body, $data, $serverKey);
     }
 
@@ -66,7 +53,7 @@ class NotificationService
                 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
             ], $data),
             'priority' => 'high',
-            'time_to_live' => 86400, // 24 heures
+            'time_to_live' => 86400,
         ];
 
         try {
@@ -78,11 +65,9 @@ class NotificationService
             if ($response->successful()) {
                 $result = $response->json();
                 
-                // Vérifier si le token est invalide
                 if (isset($result['results'][0]['error'])) {
                     $error = $result['results'][0]['error'];
                     if (in_array($error, ['InvalidRegistration', 'NotRegistered', 'MissingRegistration'])) {
-                        // Token invalide, le supprimer
                         User::where('fcm_token', $token)->update([
                             'fcm_token' => null,
                             'fcm_token_updated_at' => null,
@@ -114,11 +99,6 @@ class NotificationService
 
     /**
      * Envoyer une notification de changement de statut de commande
-     *
-     * @param User $user
-     * @param \App\Models\Order $order
-     * @param string $status
-     * @return bool
      */
     public function sendOrderStatusUpdate(User $user, \App\Models\Order $order, string $status): bool
     {
@@ -150,10 +130,6 @@ class NotificationService
 
     /**
      * Envoyer une notification de confirmation de paiement
-     *
-     * @param User $user
-     * @param \App\Models\Order $order
-     * @return bool
      */
     public function sendPaymentConfirmation(User $user, \App\Models\Order $order): bool
     {
@@ -172,10 +148,6 @@ class NotificationService
 
     /**
      * Envoyer une notification de création de commande
-     *
-     * @param User $user
-     * @param \App\Models\Order $order
-     * @return bool
      */
     public function sendOrderCreated(User $user, \App\Models\Order $order): bool
     {
@@ -195,10 +167,6 @@ class NotificationService
 
     /**
      * Envoyer une notification de réponse à une réclamation
-     *
-     * @param User $user
-     * @param \App\Models\Complaint $complaint
-     * @return bool
      */
     public function sendComplaintResponse(User $user, $complaint): bool
     {
@@ -216,9 +184,6 @@ class NotificationService
 
     /**
      * Envoyer une notification de bienvenue
-     *
-     * @param User $user
-     * @return bool
      */
     public function sendWelcome(User $user): bool
     {
@@ -235,9 +200,6 @@ class NotificationService
 
     /**
      * Tester une notification
-     *
-     * @param User $user
-     * @return bool
      */
     public function sendTestNotification(User $user): bool
     {
