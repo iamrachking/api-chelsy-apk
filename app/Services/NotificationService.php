@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Firebase\JWT\JWT;
 
 class NotificationService
 {
+    private const FCM_URL = 'https://fcm.googleapis.com/v1/projects/{project_id}/messages:send';
+
     /**
      * Envoyer une notification push à un utilisateur
      */
@@ -26,57 +29,55 @@ class NotificationService
      */
     public function sendToToken(string $token, string $title, string $body, array $data = []): bool
     {
-        $serverKey = config('services.firebase.server_key');
-        
-        if (!$serverKey) {
-            Log::error('Firebase Server Key non configurée');
-            return false;
-        }
-
-        return $this->sendWithServerKey($token, $title, $body, $data, $serverKey);
-    }
-
-    /**
-     * Envoyer une notification en utilisant la Server Key (API Legacy)
-     */
-    private function sendWithServerKey(string $token, string $title, string $body, array $data, string $serverKey): bool
-    {
-        $payload = [
-            'to' => $token,
-            'notification' => [
-                'title' => $title,
-                'body' => $body,
-                'sound' => 'default',
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-            ],
-            'data' => array_merge([
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-            ], $data),
-            'priority' => 'high',
-            'time_to_live' => 86400,
-        ];
-
         try {
+            // Obtenir le token d'accès
+            $accessToken = $this->getAccessToken();
+            
+            if (!$accessToken) {
+                Log::error('Impossible d\'obtenir le token d\'accès Firebase');
+                return false;
+            }
+
+            // Obtenir l'ID du projet
+            $projectId = config('services.firebase.project_id', 'chelsy-restaurant');
+
+            // Construire le payload
+            $payload = [
+                'message' => [
+                    'token' => $token,
+                    'notification' => [
+                        'title' => $title,
+                        'body' => $body,
+                    ],
+                    'data' => $data,
+                    'webpush' => [
+                        'fcmOptions' => [
+                            'link' => 'FLUTTER_NOTIFICATION_CLICK',
+                        ],
+                    ],
+                    'android' => [
+                        'notification' => [
+                            'sound' => 'default',
+                            'clickAction' => 'FLUTTER_NOTIFICATION_CLICK',
+                        ],
+                    ],
+                    'apns' => [
+                        'headers' => [
+                            'apns-priority' => '10',
+                        ],
+                    ],
+                ],
+            ];
+
+            // Envoyer la notification
+            $url = str_replace('{project_id}', $projectId, self::FCM_URL);
+
             $response = Http::withHeaders([
-                'Authorization' => 'key=' . $serverKey,
+                'Authorization' => 'Bearer ' . $accessToken,
                 'Content-Type' => 'application/json',
-            ])->timeout(10)->post('https://fcm.googleapis.com/fcm/send', $payload);
+            ])->timeout(10)->post($url, $payload);
 
             if ($response->successful()) {
-                $result = $response->json();
-                
-                if (isset($result['results'][0]['error'])) {
-                    $error = $result['results'][0]['error'];
-                    if (in_array($error, ['InvalidRegistration', 'NotRegistered', 'MissingRegistration'])) {
-                        User::where('fcm_token', $token)->update([
-                            'fcm_token' => null,
-                            'fcm_token_updated_at' => null,
-                        ]);
-                        Log::warning("Token FCM invalide supprimé: {$token}");
-                    }
-                    return false;
-                }
-
                 Log::info("✅ Notification envoyée avec succès", [
                     'token' => substr($token, 0, 20) . '...',
                     'title' => $title,
@@ -94,6 +95,62 @@ class NotificationService
                 'message' => $e->getMessage(),
             ]);
             return false;
+        }
+    }
+
+    /**
+     * Obtenir un token d'accès Firebase à partir du Service Account
+     */
+    private function getAccessToken(): ?string
+    {
+        try {
+            $credentialsPath = config('services.firebase.credentials_path');
+
+            if (!$credentialsPath || !file_exists($credentialsPath)) {
+                Log::error('Firebase credentials file not found: ' . $credentialsPath);
+                return null;
+            }
+
+            $credentials = json_decode(file_get_contents($credentialsPath), true);
+
+            if (!isset($credentials['private_key'], $credentials['client_email'], $credentials['project_id'])) {
+                Log::error('Invalid Firebase credentials format');
+                return null;
+            }
+
+            // Créer le JWT
+            $now = time();
+            $payload = [
+                'iss' => $credentials['client_email'],
+                'scope' => 'https://www.googleapis.com/auth/cloud-platform',
+                'aud' => 'https://oauth2.googleapis.com/token',
+                'exp' => $now + 3600,
+                'iat' => $now,
+            ];
+
+            $jwt = JWT::encode($payload, $credentials['private_key'], 'RS256');
+
+            // Échanger le JWT pour un token d'accès
+            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $jwt,
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('Failed to obtain access token', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            return $data['access_token'] ?? null;
+        } catch (\Exception $e) {
+            Log::error('Error getting access token', [
+                'message' => $e->getMessage(),
+            ]);
+            return null;
         }
     }
 
