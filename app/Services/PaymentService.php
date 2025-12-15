@@ -200,31 +200,35 @@ class PaymentService
     // ✅ Créer un paiement Mobile Money (FedaPay)
     public function createMobileMoneyPayment(Order $order, string $provider, string $phoneNumber): array
     {
-        try {
-            // TODO: Implémenter l'intégration FedaPay
-            // Pour l'instant, retourner un succès simulé
+        return [
+            'success' => false,
+            'error' => 'Mobile Money n\'est pas encore disponible. Veuillez utiliser le paiement par carte ou en espèces.',
+        ];
+        // try {
+        //     // TODO: Implémenter l'intégration FedaPay
+        //     // Pour l'instant, retourner un succès simulé
             
-            Log::info('Mobile Money payment creation initiated', [
-                'order_id' => $order->id,
-                'provider' => $provider,
-            ]);
+        //     Log::info('Mobile Money payment creation initiated', [
+        //         'order_id' => $order->id,
+        //         'provider' => $provider,
+        //     ]);
 
-            return [
-                'success' => false,
-                'error' => 'Mobile Money non encore implémenté',
-            ];
+        //     return [
+        //         'success' => false,
+        //         'error' => 'Mobile Money non encore implémenté',
+        //     ];
 
-        } catch (\Exception $e) {
-            Log::error('Mobile Money payment creation error', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage(),
-            ]);
+        // } catch (\Exception $e) {
+        //     Log::error('Mobile Money payment creation error', [
+        //         'order_id' => $order->id,
+        //         'error' => $e->getMessage(),
+        //     ]);
 
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
-        }
+        //     return [
+        //         'success' => false,
+        //         'error' => $e->getMessage(),
+        //     ];
+        // }
     }
 
     // ✅ Vérifier le statut d'un paiement Mobile Money
