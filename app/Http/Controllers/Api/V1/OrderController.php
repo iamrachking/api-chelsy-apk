@@ -256,11 +256,17 @@ class OrderController extends Controller
 
             DB::commit();
 
-            // ==================== ENVOYER NOTIFICATION ====================
+            // ==================== ENVOYER NOTIFICATIONS ====================
             try {
-                $this->notificationService->sendOrderStatusUpdate($user, $order->fresh(), 'pending');
+                // Notification de création de commande
+                $this->notificationService->sendOrderCreated($user, $order->fresh());
+                
+                // Si paiement par carte, envoyer aussi notification de paiement
+                if ($order->payment && $order->payment->method === 'card') {
+                    $this->notificationService->sendPaymentConfirmation($user, $order->fresh());
+                }
             } catch (\Exception $e) {
-                Log::error('Erreur notification commande', [
+                Log::error('Erreur envoi notifications commande', [
                     'order_id' => $order->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -570,6 +576,70 @@ class OrderController extends Controller
             'success' => true,
             'message' => 'Commande ajoutée au panier',
             'data' => ['cart' => $cart->load('items.dish')]
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/orders/{id}/status",
+     *     summary="Mettre à jour le statut d'une commande",
+     *     tags={"Commandes"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(
+     *                 property="status",
+     *                 type="string",
+     *                 enum={"pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered", "picked_up", "cancelled"},
+     *                 example="confirmed"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Statut mis à jour")
+     * )
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:pending,confirmed,preparing,ready,out_for_delivery,delivered,picked_up,cancelled',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $order = Order::findOrFail($id);
+        $oldStatus = $order->status;
+        $newStatus = $request->status;
+
+        // Mettre à jour le statut
+        $order->update(['status' => $newStatus]);
+
+        // ✅ ENVOYER NOTIFICATION AU CLIENT
+        try {
+            $this->notificationService->sendOrderStatusUpdate(
+                $order->user,
+                $order->fresh(),
+                $newStatus
+            );
+        } catch (\Exception $e) {
+            Log::error('Erreur envoi notification statut', [
+                'order_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Statut mis à jour: {$oldStatus} → {$newStatus}",
+            'data' => [
+                'order' => new OrderResource($order),
+            ]
         ]);
     }
 }

@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\FcmTokenController;
 use App\Http\Controllers\Api\V1\DeliveryTrackingController;
 use App\Http\Controllers\Api\V1\BannerController;
+use App\Http\Controllers\Api\V1\TestNotificationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -124,6 +125,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', \App\Http\Middleware\EnsureUser
     // Notifications FCM
     Route::post('/fcm-token', [FcmTokenController::class, 'store']);
     Route::delete('/fcm-token', [FcmTokenController::class, 'destroy']);
+    Route::post('/test-notification', [TestNotificationController::class, 'sendTest']);
 
     // Suivi GPS Livreur
     Route::post('/delivery/position', [DeliveryTrackingController::class, 'updatePosition']);
