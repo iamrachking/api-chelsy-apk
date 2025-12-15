@@ -28,75 +28,82 @@ class NotificationService
      * Envoyer une notification push à un token FCM spécifique
      */
     public function sendToToken(string $token, string $title, string $body, array $data = []): bool
-    {
-        try {
-            // Obtenir le token d'accès
-            $accessToken = $this->getAccessToken();
-            
-            if (!$accessToken) {
-                Log::error('Impossible d\'obtenir le token d\'accès Firebase');
-                return false;
-            }
+{
+    try {
+        $accessToken = $this->getAccessToken();
+        if (!$accessToken) {
+            Log::error('Impossible d\'obtenir le token Firebase');
+            return false;
+        }
 
-            // Obtenir l'ID du projet
-            $projectId = config('services.firebase.project_id', 'chelsy-restaurant');
+        $projectId = config('services.firebase.project_id');
 
-            // Construire le payload
-            $payload = [
-                'message' => [
-                    'token' => $token,
+        $payload = [
+            'message' => [
+                'token' => $token,
+
+                'notification' => [
+                    'title' => $title,
+                    'body'  => $body,
+                ],
+
+                // 🔥 DATA (utilisé par Flutter)
+                'data' => array_merge($data, [
+                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                ]),
+
+                // 🔥 ANDROID (OBLIGATOIRE)
+                'android' => [
+                    'priority' => 'HIGH',
                     'notification' => [
-                        'title' => $title,
-                        'body' => $body,
+                        'sound' => 'default',
+                        'channel_id' => 'chelsy_restaurant_channel',
+                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                     ],
-                    'data' => $data,
-                    'webpush' => [
-                        'fcmOptions' => [
-                            'link' => 'FLUTTER_NOTIFICATION_CLICK',
-                        ],
+                ],
+
+                // 🍎 iOS
+                'apns' => [
+                    'headers' => [
+                        'apns-priority' => '10',
                     ],
-                    'android' => [
-                        'notification' => [
+                    'payload' => [
+                        'aps' => [
                             'sound' => 'default',
-                            'clickAction' => 'FLUTTER_NOTIFICATION_CLICK',
-                        ],
-                    ],
-                    'apns' => [
-                        'headers' => [
-                            'apns-priority' => '10',
                         ],
                     ],
                 ],
-            ];
+            ],
+        ];
 
-            // Envoyer la notification
-            $url = str_replace('{project_id}', $projectId, self::FCM_URL);
+        $url = str_replace('{project_id}', $projectId, self::FCM_URL);
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $accessToken,
-                'Content-Type' => 'application/json',
-            ])->timeout(10)->post($url, $payload);
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $accessToken,
+            'Content-Type'  => 'application/json',
+        ])->post($url, $payload);
 
-            if ($response->successful()) {
-                Log::info("✅ Notification envoyée avec succès", [
-                    'token' => substr($token, 0, 20) . '...',
-                    'title' => $title,
-                ]);
-                return true;
-            }
-
-            Log::error('❌ Erreur FCM', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+        if ($response->successful()) {
+            Log::info('✅ Notification envoyée', [
+                'title' => $title,
+                'token' => substr($token, 0, 20) . '...',
             ]);
-            return false;
-        } catch (\Exception $e) {
-            Log::error('❌ Exception FCM', [
-                'message' => $e->getMessage(),
-            ]);
-            return false;
+            return true;
         }
+
+        Log::error('❌ FCM error', [
+            'status' => $response->status(),
+            'body'   => $response->body(),
+        ]);
+
+        return false;
+
+    } catch (\Throwable $e) {
+        Log::error('❌ Exception FCM', ['error' => $e->getMessage()]);
+        return false;
     }
+}
+
 
     /**
      * Obtenir un token d'accès Firebase à partir du Service Account
