@@ -2,10 +2,26 @@
 
 @section('title', 'Détails de la Commande')
 
+@php
+function getStatusText($status) {
+    return match($status) {
+        'pending' => 'En attente',
+        'confirmed' => 'Confirmée',
+        'preparing' => 'En préparation',
+        'ready' => 'Prête',
+        'out_for_delivery' => 'En livraison',
+        'delivered' => 'Livrée',
+        'picked_up' => 'Récupérée',
+        'cancelled' => 'Annulée',
+        default => $status,
+    };
+}
+@endphp
+
 @section('content')
 <div class="max-w-4xl mx-auto">
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Commande #{{ $order->id }}</h1>
+        <h1 class="text-2xl font-bold">Commande #{{ $order->order_number }}</h1>
         <a href="{{ route('admin.orders') }}" class="text-blue-600 hover:text-blue-800">← Retour</a>
     </div>
 
@@ -18,11 +34,17 @@
             </div>
             <div>
                 <p class="text-gray-600">Statut</p>
-                <p class="font-semibold">{{ $getStatusText($order->status) }}</p>
+                <p class="font-semibold">{{ getStatusText($order->status) }}</p>
             </div>
             <div>
-                <p class="text-gray-600">Type</p>
-                <p class="font-semibold">{{ $order->type === 'delivery' ? 'Livraison' : 'À emporter' }}</p>
+                <p class="text-gray-600">Type de commande</p>
+                <p class="font-semibold">
+                    @if($order->type === 'delivery')
+                        🚚 Livraison
+                    @else
+                        🛍️ À emporter
+                    @endif
+                </p>
             </div>
             <div>
                 <p class="text-gray-600">Total</p>
@@ -34,7 +56,7 @@
             </div>
             @if($order->driver)
             <div>
-                <p class="text-gray-600">Livreur</p>
+                <p class="text-gray-600">Livreur assigné</p>
                 <p class="font-semibold">{{ $order->driver->firstname }} {{ $order->driver->lastname }}</p>
             </div>
             @endif
@@ -67,7 +89,7 @@
                 @endforelse
             </tbody>
         </table>
-        <div class="mt-4 text-right">
+        <div class="mt-4 text-right border-t pt-4">
             <p class="text-gray-600">Sous-total: <span class="font-semibold">{{ number_format($order->subtotal, 0, ',', ' ') }} FCFA</span></p>
             @if($order->delivery_fee > 0)
             <p class="text-gray-600">Frais de livraison: <span class="font-semibold">{{ number_format($order->delivery_fee, 0, ',', ' ') }} FCFA</span></p>
@@ -75,7 +97,7 @@
             @if($order->discount_amount > 0)
             <p class="text-green-600">Réduction: <span class="font-semibold">-{{ number_format($order->discount_amount, 0, ',', ' ') }} FCFA</span></p>
             @endif
-            <p class="text-lg font-bold mt-2">Total: {{ number_format($order->total, 0, ',', ' ') }} FCFA</p>
+            <p class="text-lg font-bold mt-2 text-blue-600">Total: {{ number_format($order->total, 0, ',', ' ') }} FCFA</p>
         </div>
     </div>
 
@@ -102,33 +124,24 @@
                 <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>Annulée</option>
             </select>
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Mettre à jour
+                Mettre à jour le statut
             </button>
         </form>
 
         @if($errors->any())
         <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
+            <p class="font-semibold mb-2">Erreur:</p>
             @foreach($errors->all() as $error)
-                <p>{{ $error }}</p>
+                <p>• {{ $error }}</p>
             @endforeach
+        </div>
+        @endif
+
+        @if(session('success'))
+        <div class="mt-4 p-4 bg-green-50 border border-green-200 rounded text-green-700">
+            {{ session('success') }}
         </div>
         @endif
     </div>
 </div>
-
-@php
-function getStatusText($status) {
-    return match($status) {
-        'pending' => 'En attente',
-        'confirmed' => 'Confirmée',
-        'preparing' => 'En préparation',
-        'ready' => 'Prête',
-        'out_for_delivery' => 'En livraison',
-        'delivered' => 'Livrée',
-        'picked_up' => 'Récupérée',
-        'cancelled' => 'Annulée',
-        default => $status,
-    };
-}
-@endphp
 @endsection
