@@ -388,7 +388,7 @@ class OrderController extends Controller
                     'message' => 'Erreur lors du traitement du paiement en espèces',
                 ];
             }
-
+            $order->update(['status' => 'confirmed']);
             return [
                 'success' => true,
                 'response' => [
