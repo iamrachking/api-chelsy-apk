@@ -86,7 +86,7 @@ use Illuminate\Support\Facades\Storage;
                 Mon Profil
             </a>
         
-        <div class="absolute bottom-0 w-full p-6 border-t border-blue-500">
+        <div class=" bottom-0 w-full p-6 border-t border-blue-500">
             <button id="logoutBtn" class="flex items-center w-full px-4 py-2 text-white hover:bg-red-600 rounded transition-colors">
                 <i class="fas fa-sign-out-alt w-5 mr-3"></i>
                 Déconnexion
