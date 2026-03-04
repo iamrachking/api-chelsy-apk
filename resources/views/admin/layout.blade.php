@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Storage;
 </head>
 <body class="bg-gray-50">
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white transform transition-transform duration-300 ease-in-out">
+    <div id="sidebar" class="sidebar  inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white transform transition-transform duration-300 ease-in-out">
         <div class="flex items-center justify-between h-16 px-6 border-b border-blue-500">
             <h1 class="text-xl font-bold flex items-center">
                 <i class="fas fa-utensils mr-2"></i>
@@ -85,7 +85,7 @@ use Illuminate\Support\Facades\Storage;
                 <i class="fas fa-user-circle w-5 mr-3"></i>
                 Mon Profil
             </a>
-        
+        </nav>
         <div class=" bottom-0 w-full p-6 border-t border-blue-500">
             <button id="logoutBtn" class="flex items-center w-full px-4 py-2 text-white hover:bg-red-600 rounded transition-colors">
                 <i class="fas fa-sign-out-alt w-5 mr-3"></i>
@@ -95,7 +95,7 @@ use Illuminate\Support\Facades\Storage;
                 @csrf
             </form>
         </div>
-    </nav>
+    
     </div>
 
     <!-- Main Content -->
