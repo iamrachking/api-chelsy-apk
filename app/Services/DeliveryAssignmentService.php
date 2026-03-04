@@ -11,7 +11,7 @@ class DeliveryAssignmentService
     public function assignDriverToOrder(Order $order): void
     {
         try {
-            $driverId = 7; // 🔒 livreur fixe
+            $driverId = 7; 
 
             $order->update([
                 'driver_id' => $driverId,
