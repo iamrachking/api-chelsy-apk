@@ -204,40 +204,12 @@ class PaymentService
             'success' => false,
             'error' => 'Mobile Money n\'est pas encore disponible. Veuillez utiliser le paiement par carte ou en espèces.',
         ];
-        // try {
-        //     // TODO: Implémenter l'intégration FedaPay
-        //     // Pour l'instant, retourner un succès simulé
-            
-        //     Log::info('Mobile Money payment creation initiated', [
-        //         'order_id' => $order->id,
-        //         'provider' => $provider,
-        //     ]);
-
-        //     return [
-        //         'success' => false,
-        //         'error' => 'Mobile Money non encore implémenté',
-        //     ];
-
-        // } catch (\Exception $e) {
-        //     Log::error('Mobile Money payment creation error', [
-        //         'order_id' => $order->id,
-        //         'error' => $e->getMessage(),
-        //     ]);
-
-        //     return [
-        //         'success' => false,
-        //         'error' => $e->getMessage(),
-        //     ];
-        // }
     }
 
     // ✅ Vérifier le statut d'un paiement Mobile Money
     public function checkMobileMoneyStatus(string $transactionId): array
     {
         try {
-            // TODO: Implémenter la vérification FedaPay
-            // Pour l'instant, retourner un état par défaut
-            
             Log::info('Mobile Money status check', [
                 'transaction_id' => $transactionId,
             ]);
@@ -383,8 +355,6 @@ class PaymentService
                 'charge_id' => $charge->id,
                 'amount' => $charge->amount_refunded,
             ]);
-
-            // TODO: Implémenter la logique de remboursement
         } catch (\Exception $e) {
             Log::error('Error handling charge refunded', [
                 'error' => $e->getMessage(),
@@ -400,9 +370,6 @@ class PaymentService
                 'transaction_id' => $payload['transaction_id'] ?? 'unknown',
                 'status' => $payload['status'] ?? 'unknown',
             ]);
-
-            // TODO: Implémenter la gestion des webhooks FedaPay
-            
             Log::info('FedaPay webhook event processed');
         } catch (\Exception $e) {
             Log::error('Error handling FedaPay webhook', [

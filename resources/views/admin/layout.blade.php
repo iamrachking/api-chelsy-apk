@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Storage;
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Sidebar : flex column, zone centrale scrollable, déconnexion fixe en bas -->
+    <!-- Sidebar -->
     <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white transform transition-transform duration-300 ease-in-out flex flex-col">
         <div class="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-blue-500">
             <h1 class="text-xl font-bold flex items-center">
@@ -157,7 +157,6 @@ use Illuminate\Support\Facades\Storage;
             document.getElementById('sidebar').classList.toggle('sidebar-hidden');
         });
 
-
         // SweetAlert pour la déconnexion
         document.getElementById('logoutBtn')?.addEventListener('click', function() {
             Swal.fire({
@@ -177,7 +176,7 @@ use Illuminate\Support\Facades\Storage;
             });
         });
 
-        // SweetAlert for delete confirmations
+        // SweetAlert pour les confirmations de suppression
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.delete-form').forEach(form => {
                 if (form.hasAttribute('onsubmit')) {

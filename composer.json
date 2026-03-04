@@ -1,11 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "iamrachking/api-chelsy-apk",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "API REST et back-office CHELSY Restaurant (commandes, paiements, app mobile).",
     "keywords": [
         "laravel",
-        "framework"
+        "api",
+        "restaurant",
+        "chelsy"
     ],
     "license": "MIT",
     "require": {

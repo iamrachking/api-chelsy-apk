@@ -12,9 +12,7 @@
 [![DomPDF](https://img.shields.io/badge/DomPDF-Factures-333?style=flat-square)](https://github.com/dompdf/dompdf)
 [![Intervention Image](https://img.shields.io/badge/Intervention-Image-4A90D9?style=flat-square)](http://image.intervention.io)
 
-API REST et dashboard d’administration pour la gestion d’un restaurant : commandes en ligne, paiements, notifications push et suivi des livreurs.
-
-
+Backend REST et dashboard d’administration pour **CHELSY Restaurant**. L’API est utilisée par une **application mobile** (client, livreur) ; le back-office web permet la gestion du restaurant.
 
 ## Démo en ligne
 
@@ -26,8 +24,6 @@ API REST et dashboard d’administration pour la gestion d’un restaurant : com
 |-------------|----------------------------|
 | **Email**   | `admin@chelsy-restaurant.bj` |
 | **Mot de passe** | `admin123`            |
-
-
 
 ## Aperçu du dashboard admin
 
@@ -43,9 +39,7 @@ API REST et dashboard d’administration pour la gestion d’un restaurant : com
 
 ![Plats](docs/dish_dash.png)
 
-
-
-## Fonctionnalités
+## Ce que l’app mobile propose (via cette API)
 
 - **Authentification** — Inscription, connexion, réinitialisation mot de passe
 - **Utilisateur** — Profil, adresses, avatar
@@ -55,12 +49,11 @@ API REST et dashboard d’administration pour la gestion d’un restaurant : com
 - **Paiements** — Espèces, carte (Stripe), Mobile Money (FedaPay)
 - **Avis & notations** — Restaurant, plats, livraison
 - **Favoris, codes promo, FAQ, réclamations**
-- **Dashboard admin** — Gestion des entités, import/export CSV
 - **Notifications push** — Firebase Cloud Messaging
 - **Suivi GPS** — Position des livreurs en temps réel
 - **Documentation API** — Swagger/OpenAPI
 
-
+Le **dashboard admin** (web) gère les entités, import/export CSV ; la doc API est exposée en Swagger.
 
 ## Technologies
 
@@ -70,8 +63,6 @@ API REST et dashboard d’administration pour la gestion d’un restaurant : com
 | MySQL | Swagger (l5-swagger) |
 | Laravel Sanctum | DomPDF, Intervention Image |
 | Stripe, FedaPay | Firebase (FCM, JWT) |
-
-
 
 ## Installation
 
@@ -105,7 +96,6 @@ npm install && npm run build
 - **Firebase** — Fichier de credentials dans `storage/app/firebase-credentials.json` ou `FIREBASE_SERVER_KEY` dans `.env`
 - **Stripe** — `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET` dans `.env`
 
-
 ## Documentation API
 
 Générer la doc Swagger :
@@ -129,7 +119,6 @@ Le fichier `CHELSY_API.http` permet de tester les endpoints (extension REST Clie
 | POST | `/api/v1/orders` | Créer une commande |
 | GET  | `/api/v1/orders/{id}/tracking` | Suivi livraison |
 
-
 ## Commandes utiles
 
 ```bash
@@ -137,7 +126,6 @@ php artisan l5-swagger:generate   # Régénérer la doc Swagger
 php artisan config:clear && php artisan cache:clear
 php artisan migrate:fresh --seed   # Réinitialiser la BDD avec seed
 ```
-
 
 ## Licence
 
