@@ -25,9 +25,9 @@ use Illuminate\Support\Facades\Storage;
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Sidebar -->
-    <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white transform transition-transform duration-300 ease-in-out">
-        <div class="flex items-center justify-between h-16 px-6 border-b border-blue-500">
+    <!-- Sidebar : flex column, zone centrale scrollable, déconnexion fixe en bas -->
+    <div id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-600 to-blue-800 text-white transform transition-transform duration-300 ease-in-out flex flex-col">
+        <div class="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-blue-500">
             <h1 class="text-xl font-bold flex items-center">
                 <i class="fas fa-utensils mr-2"></i>
                 CHELSY Admin
@@ -36,7 +36,7 @@ use Illuminate\Support\Facades\Storage;
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <nav class="mt-6">
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden py-4 min-h-0">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center px-6 py-3 text-white hover:bg-blue-700 transition-colors {{ request()->routeIs('admin.dashboard') ? 'bg-blue-700 border-r-4 border-yellow-400' : '' }}">
                 <i class="fas fa-chart-line w-5 mr-3"></i>
                 Dashboard
@@ -85,9 +85,9 @@ use Illuminate\Support\Facades\Storage;
                 <i class="fas fa-user-circle w-5 mr-3"></i>
                 Mon Profil
             </a>
-        
-        <div class=" bottom-0 w-full p-6 border-t border-blue-500">
-            <button id="logoutBtn" class="flex items-center w-full px-4 py-2 text-white hover:bg-red-600 rounded transition-colors">
+        </nav>
+        <div class="flex-shrink-0 w-full p-4 border-t border-blue-500 bg-blue-800/50">
+            <button type="button" id="logoutBtn" class="flex items-center w-full px-4 py-3 text-white hover:bg-red-600 rounded-lg transition-colors">
                 <i class="fas fa-sign-out-alt w-5 mr-3"></i>
                 Déconnexion
             </button>
@@ -95,7 +95,6 @@ use Illuminate\Support\Facades\Storage;
                 @csrf
             </form>
         </div>
-    
     </div>
 
     <!-- Main Content -->
